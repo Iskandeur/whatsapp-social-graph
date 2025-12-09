@@ -1,4 +1,4 @@
-# linja-jan-tu
+# WhatsApp Social Graph
 
 A WhatsApp social graph visualization tool that helps you understand your messaging patterns and connections.
 
@@ -41,8 +41,8 @@ This project visualizes your WhatsApp social network as an interactive graph, sh
 
 1. Clone the repository:
 ```bash
-git clone git@github.com:Iskandeur/linja-jan-tu.git
-cd linja-jan-tu
+git clone git@github.com:Iskandeur/whatsapp-social-graph.git
+cd whatsapp-social-graph
 ```
 
 2. Install server dependencies:

@@ -1,5 +1,5 @@
 {
-  "name": "linja-jan-tu-server",
+  "name": "whatsapp-social-graph-server",
   "version": "1.0.0",
   "description": "Backend for WhatsApp Social Graph",
   "main": "index.js",

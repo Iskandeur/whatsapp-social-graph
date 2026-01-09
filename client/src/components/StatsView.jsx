@@ -4,7 +4,7 @@ const StatsView = ({ stats, filteredCount }) => {
     if (!stats) return null;
 
     return (
-        <div className="absolute top-4 right-4 bg-gray-800 p-6 rounded-lg shadow-xl text-white max-w-xs bg-opacity-90 backdrop-blur-sm">
+        <div className="bg-gray-800 p-6 rounded-lg shadow-xl text-white w-full bg-opacity-90 backdrop-blur-sm">
             <h2 className="text-xl font-bold mb-4 border-b border-gray-700 pb-2">📊 Statistics</h2>
             <div className="space-y-3 text-sm">
                 {filteredCount !== undefined && filteredCount < stats.totalNodes && (
@@ -49,6 +49,25 @@ const StatsView = ({ stats, filteredCount }) => {
                         <div className="flex justify-between">
                             <span className="text-gray-400">Avg/Chat:</span>
                             <span className="font-mono">{stats.avgMessagesPerChat}</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Data Fetching Info */}
+                {stats.dataLimits && (
+                    <div className="border-t border-gray-700 pt-3 mt-3">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Data Scope</h3>
+                        <div className="space-y-1 text-xs text-gray-400">
+                            <div className="flex justify-between">
+                                <span>Max Msgs/Chat:</span>
+                                <span>{stats.dataLimits.maxMessagesPerChat}</span>
+                            </div>
+                            {stats.dataLimits.oldestMessageDate && (
+                                <div className="flex justify-between">
+                                    <span>Earliest Msg:</span>
+                                    <span>{new Date(stats.dataLimits.oldestMessageDate).toLocaleDateString()}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

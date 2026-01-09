@@ -1,8 +1,7 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode');
+const { WahaClient } = require('./wahaClient');
 const cors = require('cors');
 const { processData } = require('./dataProcessor');
 
@@ -10,7 +9,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:5173", "http://localhost:5174"],
+        origin: "*", // Allow all origins for dev flexibility (WSL/IP access)
         methods: ["GET", "POST"]
     }
 });
@@ -20,86 +19,93 @@ app.use(express.json());
 
 const port = 3001;
 
-// Initialize WhatsApp Client
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    }
-});
+// Initialize Waha Client
+const wahaEndpoint = process.env.WAHA_ENDPOINT || 'http://localhost:3000';
+const wahaApiKey = process.env.WAHA_API_KEY;
+console.log(`Initializing Waha Client at ${wahaEndpoint}`);
+const waha = new WahaClient(wahaEndpoint, wahaApiKey);
 
 let cachedGraphData = null;
 let cachedStats = null;
 let cachedInsights = null;
+let cachedQrCode = null;
 let isClientReady = false;
+let isProcessing = false;
 
-client.on('qr', (qr) => {
-    console.log('QR RECEIVED');
-    qrcode.toDataURL(qr, (err, url) => {
-        if (err) {
-            console.error('Error generating QR code', err);
+// Polling loop to check Waha status
+async function checkWahaStatus() {
+    try {
+        const status = await waha.getStatus();
+        // Waha status: 'STOPPED', 'STARTING', 'SCAN_QR_CODE', 'WORKING', 'FAILED'
+
+        if (!status) {
+            console.log('Waha status check failed (likely 404). Attempting to ensure session exists...');
+            await waha.startSession();
             return;
         }
-        io.emit('qr', url);
-    });
-});
 
-client.on('loading_screen', (percent, message) => {
-    console.log('LOADING_SCREEN', percent, message);
-});
+        console.log(`Waha Status: ${status.status || 'Unknown'}`);
 
-client.on('change_state', state => {
-    console.log('CHANGE_STATE', state);
-});
+        if (status.status === 'SCAN_QR_CODE') {
+            isClientReady = false;
+            const qr = await waha.getQR();
+            if (qr && qr !== cachedQrCode) {
+                cachedQrCode = qr;
+                console.log('New QR Code received from Waha');
+                io.emit('qr', qr);
+                io.emit('status', 'qr_ready');
+            }
+        } else if (status.status === 'WORKING') {
+            if (!isClientReady) {
+                isClientReady = true;
+                console.log('Waha client is ready!');
+                io.emit('status', 'authenticated');
+            }
 
-client.on('ready', async () => {
-    console.log('Client is ready!');
-    isClientReady = true;
-    io.emit('status', 'connected');
+            // Retry processing if data is missing, even if we are already "ready"
+            if (!cachedGraphData && !isProcessing) {
+                console.log('Session is WORKING but we have no data. Starting processing...');
+                isProcessing = true;
+                io.emit('status', 'processing');
 
-    // Start processing data immediately upon connection
-    io.emit('status', 'processing');
-    try {
-        const { graph, stats, insights } = await processData(client);
-        cachedGraphData = graph;
-        cachedStats = stats;
-        cachedInsights = insights;
-        io.emit('status', 'ready');
-        io.emit('data_ready', { graph, stats, insights });
-    } catch (error) {
-        console.error('Error processing data:', error);
-        io.emit('status', 'error');
+                try {
+                    const result = await processData(waha, (progress) => {
+                        io.emit('progress', progress);
+                    });
+
+                    cachedGraphData = result.graph;
+                    cachedStats = result.stats;
+                    cachedInsights = result.insights;
+
+                    // Data is ready, broadcast!
+                    io.emit('data_ready', { graph: cachedGraphData, stats: cachedStats, insights: cachedInsights });
+                    io.emit('status', 'ready');
+                    console.log('Data processing complete.');
+                } catch (error) {
+                    console.error('Error processing data:', error.message);
+                    // Retry will happen on next poll
+                } finally {
+                    isProcessing = false;
+                }
+            } else if (cachedGraphData && isClientReady) {
+                // Status maintenance
+            }
+        } else {
+            // STARTING, STOPPED, FAILED
+            isClientReady = false;
+            // Try to start if stopped
+            if (status.status === 'STOPPED') {
+                console.log('Session stopped, restarting...');
+                await waha.startSession();
+            }
+        }
+    } catch (e) {
+        console.error('Error checking Waha status:', e.message);
     }
-});
+}
 
-client.on('authenticated', () => {
-    console.log('AUTHENTICATED');
-    io.emit('status', 'authenticated');
-});
-
-client.on('auth_failure', msg => {
-    console.error('AUTHENTICATION FAILURE', msg);
-    io.emit('status', 'auth_failure');
-});
-
-client.on('remote_session_saved', () => {
-    console.log('REMOTE_SESSION_SAVED');
-});
-
-// Add error handler
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-client.on('disconnected', (reason) => {
-    console.log('Client was logged out', reason);
-    io.emit('status', 'disconnected');
-    isClientReady = false;
-    // Reinitialize client to allow new login? 
-    // For now, user might need to restart server or we implement a reconnect logic
-    client.initialize();
-});
+// Poll every 3 seconds
+setInterval(checkWahaStatus, 3000);
 
 io.on('connection', (socket) => {
     console.log('A user connected');
@@ -107,11 +113,13 @@ io.on('connection', (socket) => {
     if (isClientReady && cachedGraphData) {
         socket.emit('status', 'ready');
         socket.emit('data_ready', { graph: cachedGraphData, stats: cachedStats, insights: cachedInsights });
-    } else if (isClientReady) {
+    } else if (isProcessing) {
         socket.emit('status', 'processing');
+    } else if (cachedQrCode && !isClientReady) {
+        socket.emit('qr', cachedQrCode);
+        socket.emit('status', 'qr_ready');
     } else {
-        socket.emit('status', 'disconnected');
-        // Trigger QR generation if needed, though usually client.on('qr') handles it
+        socket.emit('status', 'connecting');
     }
 
     socket.on('disconnect', () => {
@@ -138,5 +146,6 @@ app.get('/api/stats', (req, res) => {
 
 server.listen(port, () => {
     console.log(`Server running on port ${port}`);
-    client.initialize();
+    // Initial start attempt
+    waha.startSession();
 });

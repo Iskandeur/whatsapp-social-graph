@@ -1,0 +1,39 @@
+version: "3"
+
+services:
+  waha:
+    image: devlikeapro/waha
+    restart: always
+    environment:
+      - WHATSAPP_DEFAULT_ENGINE=WEBJS
+      - WAHA_API_KEY=1234567890abcdef
+      - WAHA_DASHBOARD_USERNAME=admin
+      - WAHA_DASHBOARD_PASSWORD=SecretPassword123!
+      - WAHA_SWAGGER_USERNAME=admin
+      - WAHA_SWAGGER_PASSWORD=SecretPassword123!
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./waha-data:/app/sessions
+
+  server:
+    build: ./server
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - WAHA_ENDPOINT=http://waha:3000
+      - WAHA_API_KEY=1234567890abcdef
+    depends_on:
+      - waha
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+
+  client:
+    build: ./client
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/app
+      - /app/node_modules

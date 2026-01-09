@@ -4,7 +4,7 @@ const InsightsPanel = ({ insights }) => {
     if (!insights) return null;
 
     return (
-        <div className="absolute bottom-4 left-4 bg-gray-800 p-4 rounded-lg shadow-xl max-w-sm bg-opacity-95 backdrop-blur-sm z-50 max-h-96 overflow-y-auto">
+        <div className="bg-gray-800 p-4 rounded-lg shadow-xl w-full bg-opacity-95 backdrop-blur-sm">
             <h2 className="text-lg font-bold mb-3 border-b border-gray-700 pb-2">💡 Insights</h2>
 
             <div className="space-y-4 text-sm">

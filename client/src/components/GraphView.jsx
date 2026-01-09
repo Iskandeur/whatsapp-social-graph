@@ -1,14 +1,55 @@
 import React, { useRef, useEffect } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 
-const GraphView = ({ data }) => {
+const GraphView = ({ data, filters }) => {
     const graphRef = useRef();
 
     useEffect(() => {
         if (graphRef.current) {
-            graphRef.current.d3Force('charge').strength(-50);
+            // Update forces based on filters
+            const charge = filters?.repulsion !== undefined ? filters.repulsion : -50;
+            const distance = filters?.linkDistance !== undefined ? filters.linkDistance : 50;
+
+            graphRef.current.d3Force('charge').strength(charge);
+            graphRef.current.d3Force('link').distance(distance);
+
+            // Allow alpha to re-heat more aggressively
+            graphRef.current.d3ReheatSimulation();
         }
-    }, []);
+    }, [filters?.repulsion, filters?.linkDistance, filters?.nodeSize, filters?.sizeAmplification]);
+
+    // Calculate dynamic node size
+    const getNodeVal = (node) => {
+        const baseSize = filters?.nodeSize || 5;
+        const amp = filters?.sizeAmplification || 1;
+        // Base value from backend is ~ 2-15
+        return (node.val || 1) * (baseSize / 5) * Math.pow(1.1, (node.val * (amp - 1)));
+    };
+
+    // Custom node renderer to support always-on labels
+    const paintNode = (node, ctx, globalScale) => {
+        const radius = getNodeVal(node);
+        const fontSize = 12 / globalScale;
+
+        // Draw Node Circle
+        ctx.beginPath();
+        if (node.isMe) ctx.fillStyle = '#ef4444';
+        else if (node.isMyContact) ctx.fillStyle = '#4ade80';
+        else if (node.isGroup) ctx.fillStyle = '#8b5cf6';
+        else ctx.fillStyle = '#60a5fa';
+
+        ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
+        ctx.fill();
+
+        // Draw Label
+        if (filters.showLabels) {
+            ctx.font = `${fontSize}px Sans-Serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fillText(node.name, node.x, node.y + radius + fontSize);
+        }
+    };
 
     return (
         <div className="w-full h-full bg-gray-900">
@@ -16,9 +57,17 @@ const GraphView = ({ data }) => {
                 ref={graphRef}
                 graphData={data}
                 nodeLabel="name"
-                nodeColor={node => node.isMyContact ? '#4ade80' : (node.isGroup ? '#facc15' : '#60a5fa')}
-                nodeVal={node => node.val || 1}
-                linkColor={() => '#ffffff33'}
+                // If showing labels, use custom painter. If not, we can rely on default OR just draw circles.
+                // Switching logic here:
+                nodeCanvasObject={filters.showLabels ? paintNode : undefined}
+                nodeColor={node => {
+                    if (node.isMe) return '#ef4444'; // Red for Me
+                    if (node.isMyContact) return '#4ade80'; // Green
+                    if (node.isGroup) return '#8b5cf6'; // Purple
+                    return '#60a5fa'; // Blue
+                }}
+                nodeVal={getNodeVal}
+                linkColor={link => link.type === 'CO_MEMBER' ? '#ffffff11' : '#ffffff33'}
                 backgroundColor="#111827"
                 onNodeClick={node => {
                     // Center/Zoom on node

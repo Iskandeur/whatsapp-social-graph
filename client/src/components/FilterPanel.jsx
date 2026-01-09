@@ -78,16 +78,7 @@ const FilterPanel = ({ filters, onFilterChange }) => {
                     />
                 </div>
 
-                {/* Show Labels Toggle */}
-                <div className="flex items-center justify-between mb-4">
-                    <label className="text-sm text-gray-300">Show All Labels</label>
-                    <input
-                        type="checkbox"
-                        checked={filters.showLabels}
-                        onChange={(e) => onFilterChange({ ...filters, showLabels: e.target.checked })}
-                        className="w-4 h-4 rounded"
-                    />
-                </div>
+
 
                 {/* Show "Me" Node Toggle */}
                 <div className="flex items-center justify-between mb-4">

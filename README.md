@@ -1,90 +1,62 @@
-# WhatsApp Social Graph
+# WhatsApp Social Graph 📊
 
-A WhatsApp social graph visualization tool that helps you understand your messaging patterns and connections.
+Visualize your WhatsApp network as an interactive force-directed graph. Discover your social circles, bridge connectors, and closest friends based on message activity and group memberships.
 
-## Overview
+## ✨ Features
 
-This project visualizes your WhatsApp social network as an interactive graph, showing:
-- Connections between contacts and groups
-- Message frequency and interaction patterns
-- Social insights and statistics
-- Activity timeframes and engagement metrics
+*   **Dual-View Modes**:
+    *   **Structural Mode**: Visualize how People are connected to Groups.
+    *   **Social Mode**: See direct connections between People (weighted by shared groups).
+*   **Privacy First**: Runs entirely locally using Docker. Your data never leaves your machine.
+*   **Interactive Controls**:
+    *   **Filtering**: Filter by message count, connection strength, time range, "Me" node visibility, and more.
+    *   **Physics**: Adjust repulsion and link distance to unravel complex clusters.
+    *   **Customization**: Toggle labels, node sizes, and amplify active contacts.
+*   **Insights**: Automatic detection of:
+    *   🔥 **Most Active Contacts**
+    *   🌉 **Bridge People** (connectors between different groups)
+    *   ⭐ **Super Connectors**
+    *   🐺 **Lone Wolves**
+*   **Configurable**: Save and load your visualization settings.
 
-## Features
-
-- 📊 Interactive graph visualization
-- 📈 Detailed statistics and insights
-- 🔍 Filtering by activity timeframe
-- 📱 Real-time data processing
-- 🎨 Modern, responsive UI
-
-## Tech Stack
-
-### Client
-- React + Vite
-- TailwindCSS
-- D3.js for graph visualization
-- Socket.io for real-time updates
-
-### Server
-- Node.js + Express
-- whatsapp-web.js for WhatsApp integration
-- Socket.io for WebSocket communication
-
-## Installation
+## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v14 or higher)
-- npm or yarn
+*   Docker & Docker Compose
+*   WhatsApp on your phone
 
-### Setup
+### Installation
 
-1. Clone the repository:
-```bash
-git clone git@github.com:Iskandeur/whatsapp-social-graph.git
-cd whatsapp-social-graph
-```
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/Iskandeur/whatsapp-social-graph.git
+    cd whatsapp-social-graph
+    ```
 
-2. Install server dependencies:
-```bash
-cd server
-npm install
-```
+2.  **Start the application**:
+    ```bash
+    docker-compose up -d --build
+    ```
 
-3. Install client dependencies:
-```bash
-cd ../client
-npm install
-```
+3.  **Scan & Visualize**:
+    *   Open [http://localhost:5173](http://localhost:5173) in your browser.
+    *   Scan the QR code with your WhatsApp (Linked Devices).
+    *   Wait for the graph to generate! (It may take a minute to fetch your history).
 
-## Usage
+## 🛠️ Built With
 
-1. Start the server:
-```bash
-cd server
-npm start
-```
+*   **Frontend**: React, Vite, D3.js, `react-force-graph-2d`, TailwindCSS.
+*   **Backend**: Node.js, Express, Socket.IO.
+*   **WhatsApp API**: [WAHA (WhatsApp HTTP API)](https://waha.devlike.pro/) running in a separate container.
 
-2. Start the client (in a new terminal):
-```bash
-cd client
-npm run dev
-```
+## 🔒 Privacy Note
 
-3. Open your browser and navigate to `http://localhost:5173`
+This project uses [WAHA](https://waha.devlike.pro/) to interface with WhatsApp. All data processing happens on your local machine (`localhost`). No data is sent to any external servers.
 
-4. Scan the QR code with WhatsApp to connect
+## 📝 Configuration
 
-5. Wait for the data to process and view your social graph!
-
-## Privacy Note
-
-This application processes your WhatsApp data locally. No data is sent to external servers. All authentication sessions are stored locally on your machine.
+You can save your current filter and layout settings using the **"Save Config"** button in the sidebar. This downloads a `.json` file that you can load later.
 
 ## License
 
 MIT
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.

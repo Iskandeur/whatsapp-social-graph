@@ -30,8 +30,23 @@ function App() {
     repulsion: -50,
     linkDistance: 50,
     showLabels: false,
-    showMe: true
+    showMe: true,
+    nodeSizeWeight: 50,
+    fetchLimit: 50
   });
+
+  const [showUI, setShowUI] = useState(true);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Toggle UI on 'h' or 'H'
+      if (e.key.toLowerCase() === 'h') {
+        setShowUI(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     socket.on('connect', () => {
@@ -163,6 +178,70 @@ function App() {
     return { nodes: filteredNodes, links: filteredLinks };
   }, [fullGraphData, filters]);
 
+  // Handler functions for new features
+  const handleReload = (limit) => {
+    console.log("Reloading with limit:", limit);
+    socket.emit('start_processing', { limit });
+  };
+
+  const handleExportData = () => {
+    if (!fullGraphData.nodes.length) return;
+    const exportObj = { graph: fullGraphData, stats, insights };
+    const jsonString = JSON.stringify(exportObj, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `whatsapp-graph-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportData = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedData = JSON.parse(event.target.result);
+        if (importedData.graph && importedData.stats) {
+          setFullGraphData(importedData.graph);
+          setStats(importedData.stats);
+          setInsights(importedData.insights || null);
+          setStatus('ready');
+
+          // Restore limit setting if available
+          if (importedData.stats.dataLimits?.maxMessagesPerChat) {
+            setFilters(prev => ({ ...prev, fetchLimit: importedData.stats.dataLimits.maxMessagesPerChat }));
+          }
+        } else {
+          alert('Invalid data file format');
+        }
+      } catch (error) {
+        console.error('Error importing data:', error);
+        alert('Error parsing JSON file');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleScreenshot = () => {
+    const canvas = document.querySelector('canvas');
+    if (canvas) {
+      const link = document.createElement('a');
+      link.download = `whatsapp-graph-screenshot-${new Date().toISOString()}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+  };
+
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to logout? This will require rescanning QR code.')) {
+      socket.emit('logout');
+    }
+  };
+
   return (
     <div className="w-screen h-screen overflow-hidden bg-gray-900 text-white font-sans relative">
       {!isConnected && (
@@ -209,9 +288,8 @@ function App() {
 
             {progress ? (
               <div className="w-full">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-blue-400">{progress.message}</span>
-                  <span className="font-mono">{progress.current}%</span>
+                <div className="text-center text-sm mb-2 text-blue-400 font-medium">
+                  {progress.message} <span className="text-gray-400 ml-2">({progress.current}%)</span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
                   <div
@@ -246,17 +324,34 @@ function App() {
       {status === 'ready' && (
         <>
           {/* Sidebar for Controls and Stats */}
-          <div className="fixed top-4 left-4 w-80 max-h-[96vh] overflow-y-auto flex flex-col gap-4 z-50 pointer-events-none pb-8 pr-2">
-            <div className="pointer-events-auto">
-              <FilterPanel filters={filters} onFilterChange={setFilters} />
+          <div className={`fixed top-4 left-4 w-80 max-h-[96vh] overflow-y-auto flex flex-col gap-4 z-50 transition-opacity duration-300 ${showUI ? 'opacity-100 pointer-events-none' : 'opacity-0 pointer-events-none'}`}>
+            <div className={`pointer-events-auto ${showUI ? '' : 'hidden'}`}>
+              <FilterPanel
+                filters={{
+                  ...filters,
+                  onReload: handleReload,
+                  onExportData: handleExportData,
+                  onImportData: handleImportData,
+                  onScreenshot: handleScreenshot,
+                  onLogout: handleLogout
+                }}
+                onFilterChange={setFilters}
+              />
             </div>
-            <div className="pointer-events-auto">
+            <div className={`pointer-events-auto ${showUI ? '' : 'hidden'}`}>
               <StatsView stats={stats} filteredCount={filteredGraphData.nodes.length} />
             </div>
-            <div className="pointer-events-auto">
+            <div className={`pointer-events-auto ${showUI ? '' : 'hidden'}`}>
               <InsightsPanel insights={insights} />
             </div>
           </div>
+
+          {/* Hint when UI is hidden */}
+          {!showUI && (
+            <div className="fixed bottom-4 left-4 text-gray-500 text-xs pointer-events-none z-50 bg-black/50 px-2 py-1 rounded">
+              Press 'H' to show UI
+            </div>
+          )}
 
           {/* Graph Canvas */}
           <GraphView data={filteredGraphData} filters={filters} />

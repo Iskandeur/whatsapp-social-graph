@@ -1,61 +1,77 @@
-# WhatsApp Social Graph 📊
+# WhatsApp Social Graph
 
-Visualize your WhatsApp network as an interactive force-directed graph. Discover your social circles, bridge connectors, and closest friends based on message activity and group memberships.
+Visualize your WhatsApp network as an interactive social graph. This tool connects to your WhatsApp account (via Waha + Puppeteer), fetches your chat history, and builds a force-directed graph showing relationships between you, your contacts, and groups.
 
-## ✨ Features
+![WhatsApp Social Graph](./assets/screenshot.png)
 
-*   **Dual-View Modes**:
-    *   **Structural Mode**: Visualize how People are connected to Groups.
-    *   **Social Mode**: See direct connections between People (weighted by shared groups).
-*   **Privacy First**: Runs entirely locally using Docker. Your data never leaves your machine.
-*   **Interactive Controls**:
-    *   **Filtering**: Filter by message count, connection strength, time range, "Me" node visibility, and more.
-    *   **Physics**: Adjust repulsion and link distance to unravel complex clusters.
-    *   **Customization**: Toggle labels, node sizes, and amplify active contacts.
-*   **Insights**: Automatic detection of:
-    *   🔥 **Most Active Contacts**
-    *   🌉 **Bridge People** (connectors between different groups)
-    *   ⭐ **Super Connectors**
-    *   🐺 **Lone Wolves**
-*   **Configurable**: Save and load your visualization settings.
+## Features
 
-## 🚀 Getting Started
+-   **Interactive Visualization**: Zoom, pan, and drag nodes.
+-   **Social vs Structural Views**:
+    -   *Structural Mode*: Shows direct connections to groups.
+    -   *Social Mode*: Infers connections between people based on shared groups (hides group nodes).
+-   **Dynamic Node Sizing**:
+    -   **Size Mixer**: Adjust node size priority between **Message Volume** (how much you talk) and **Network Connections** (how connected they are).
+-   **Smart Filtering**:
+    -   Filter by Timeframe (Last Week, Month, Year).
+    -   Hide Archived Chats.
+    -   Filter by Minimum Messages or Connections.
+    -   Show/Hide "Me" node.
+-   **Data Management**:
+    -   **Import/Export**: Save your graph data to JSON and load it later (or share with friends).
+    -   **Fetch Limit Control**: Choose how many messages to analyze per chat (50, 100, 200, 500) for deeper or faster analysis.
+-   **Privacy & Demo Mode**:
+    -   **Hide UI**: Press **'H'** to toggle the interface for clean screenshots.
+    -   **Logout**: Securely logout to return to the QR code screen for multi-user demos.
+-   **Insights**:
+    -   Top Contacts & Groups.
+    -   "Bridge People" (Connectors between groups).
+    -   "Lone Wolves" (Direct contacts not in groups).
 
-### Prerequisites
-*   Docker & Docker Compose
-*   WhatsApp on your phone
+## Technology Stack
 
-### Installation
+-   **Frontend**: React, Vite, `react-force-graph-2d`, TailwindCSS.
+-   **Backend**: Node.js, Express, Socket.IO.
+-   **WhatsApp API**: Waha (WhatsApp HTTP API) running on Puppeteer (WEBJS engine).
+-   **Containerization**: Docker & Docker Compose.
 
-1.  **Clone the repository**:
+## Prerequisites
+
+-   Docker and Docker Compose installed.
+-   A WhatsApp account on your phone.
+
+## How to Run
+
+1.  **Clone the repository**.
+2.  **Start the services**:
     ```bash
-    git clone https://github.com/Iskandeur/whatsapp-social-graph.git
-    cd whatsapp-social-graph
+    docker-compose up -d
     ```
+3.  **Open the application**:
+    Access [http://localhost:5173](http://localhost:5173).
+4.  **Scan the QR Code**:
+    Open WhatsApp on your phone -> Linked Devices -> Link a Device -> Scan the QR code displayed on screen.
+5.  **Wait for Processing**:
+    The app will fetch your contacts and chat history. This may take a few minutes depending on your chat volume and the "Fetch Limit" setting.
+    *Default limit is 50 messages per chat for speed.*
 
-2.  **Start the application**:
-    ```bash
-    docker-compose up -d --build
-    ```
+## Controls Guide
 
-3.  **Scan & Visualize**:
-    *   Open [http://localhost:5173](http://localhost:5173) in your browser.
-    *   Scan the QR code with your WhatsApp (Linked Devices).
-    *   Wait for the graph to generate! (It may take a minute to fetch your history).
+### Advanced Filters
+-   **Node Size Weight**: Slider to balance size calculation.
+    -   Left (0%): Size based purely on Message Count.
+    -   Right (100%): Size based purely on Number of Connections.
+-   **Fetch Limit**: Select a limit (e.g., 200) and click **Reload** to fetch more history. Warning: Takes longer!
+-   **Export/Import**: Use the buttons to save your graph state.
 
-## 🛠️ Built With
+### Keyboard Shortcuts
+-   **H**: Toggle User Interface (useful for presentations/screenshots).
 
-*   **Frontend**: React, Vite, D3.js, `react-force-graph-2d`, TailwindCSS.
-*   **Backend**: Node.js, Express, Socket.IO.
-*   **WhatsApp API**: [WAHA (WhatsApp HTTP API)](https://waha.devlike.pro/) running in a separate container.
+### Troubleshooting
 
-## 🔒 Privacy Note
-
-This project uses [WAHA](https://waha.devlike.pro/) to interface with WhatsApp. All data processing happens on your local machine (`localhost`). No data is sent to any external servers.
-
-## 📝 Configuration
-
-You can save your current filter and layout settings using the **"Save Config"** button in the sidebar. This downloads a `.json` file that you can load later.
+-   **Stuck on "Fetching chats..."**: If you have thousands of chats, this step can take up to 5 minutes. The timeout has been increased to handle this. Please be patient.
+-   **Infinite Loop**: If the app keeps restarting processing, ensure you utilize the latest version which fixes a critical crash bug.
+-   **QR Code not appearing**: Check the logs `docker logs whatsapp-social-graph-server-1`. If Waha is starting up, it might take 10-20 seconds.
 
 ## License
 

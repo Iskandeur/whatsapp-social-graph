@@ -1,4 +1,4 @@
-async function processData(wahaClient, onProgress = () => { }) {
+async function processData(wahaClient, onProgress = () => { }, maxMessages = 50) {
     console.log("Starting enhanced data processing with Waha...");
     onProgress({ current: 0, total: 100, message: "Fetching contacts and chats..." });
 
@@ -19,7 +19,7 @@ async function processData(wahaClient, onProgress = () => { }) {
         console.log("Fetching contacts...");
         onProgress({ current: 2, total: 100, message: "Fetching contacts..." });
         try {
-            contacts = await withTimeout(wahaClient.getContacts(), 30000, "contacts");
+            contacts = await withTimeout(wahaClient.getContacts(), 300000, "contacts");
         } catch (error) {
             console.error('Error fetching contacts (skipping):', error.message);
             // Non-fatal, proceed with empty contacts
@@ -29,7 +29,7 @@ async function processData(wahaClient, onProgress = () => { }) {
 
         console.log("Fetching chats...");
         onProgress({ current: 4, total: 100, message: "Fetching chats..." });
-        chats = await withTimeout(wahaClient.getChats(), 30000, "chats");
+        chats = await withTimeout(wahaClient.getChats(), 300000, "chats");
         console.log(`Fetched ${chats.length} chats`);
 
         myInfo = await wahaClient.getMe();
@@ -347,7 +347,7 @@ async function processData(wahaClient, onProgress = () => { }) {
             totalMessages: metadata.totalMessages,
             avgMessagesPerChat: chats.length > 0 ? Math.round(metadata.totalMessages / chats.length) : 0,
             dataLimits: {
-                maxMessagesPerChat: 100,
+                maxMessagesPerChat: maxMessages,
                 fetchedCount: metadata.totalMessages,
                 oldestMessageDate: metadata.oldestTimestamp
             }

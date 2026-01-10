@@ -7,7 +7,7 @@ class WahaClient {
         this.session = 'default';
         this.axios = axios.create({
             baseURL: this.endpoint,
-            timeout: 60000,
+            timeout: 300000, // Increased to 5 minutes for massive accounts
             headers: this.apiKey ? { 'X-Api-Key': this.apiKey } : {}
         });
     }
@@ -38,8 +38,15 @@ class WahaClient {
     }
 
     async getContacts() {
-        const response = await this.axios.get(`/api/contacts?session=${this.session}`);
-        return response.data;
+        // Revert to query param style as WEBJS engine returns 404 for session-scoped contacts
+        try {
+            const response = await this.axios.get(`/api/contacts?session=${this.session}`);
+            return response.data;
+        } catch (error) {
+            // If contacts fail (e.g. 500 error from Waha bug), return empty array so we can proceed with chats
+            console.error('Error fetching contacts (suppressed):', error.message);
+            return [];
+        }
     }
 
     async getChats() {
@@ -55,6 +62,16 @@ class WahaClient {
     async getMe() {
         const response = await this.axios.get(`/api/sessions/${this.session}/me`);
         return response.data;
+    }
+
+    async logout() {
+        try {
+            await this.axios.post(`/api/sessions/${this.session}/logout`);
+            return true;
+        } catch (error) {
+            console.error('Error logging out:', error.message);
+            return false;
+        }
     }
 
     async startSession() {

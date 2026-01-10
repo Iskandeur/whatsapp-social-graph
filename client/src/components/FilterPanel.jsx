@@ -208,7 +208,53 @@ const FilterPanel = ({ filters, onFilterChange }) => {
 
                 {/* Actions: Save/Load/Reset */}
                 <div className="flex flex-col gap-2 pt-2 border-t border-gray-700">
+
+                    {/* Size Mixer */}
+                    <div className="mb-2">
+                        <div className="flex justify-between text-xs mb-1 text-gray-400">
+                            <span>Msg Priority</span>
+                            <span>Conn Priority</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={filters.nodeSizeWeight || 50}
+                            onChange={(e) => onFilterChange({ ...filters, nodeSizeWeight: parseInt(e.target.value) })}
+                            className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                        />
+                    </div>
+
+                    {/* Fetch Limit Controls */}
                     <div className="flex gap-2">
+                        <select
+                            value={filters.fetchLimit || 50}
+                            onChange={(e) => onFilterChange({ ...filters, fetchLimit: parseInt(e.target.value) })}
+                            className="bg-gray-800 border border-gray-600 rounded px-1 py-1 text-xs flex-1"
+                        >
+                            <option value="50">Limit: 50</option>
+                            <option value="100">Limit: 100</option>
+                            <option value="200">Limit: 200</option>
+                            <option value="500">Limit: 500</option>
+                        </select>
+                        <button
+                            onClick={() => filters.onReload && filters.onReload(filters.fetchLimit || 50)}
+                            className="bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded text-xs whitespace-nowrap"
+                        >
+                            ↻ Reload
+                        </button>
+                    </div>
+
+                    {/* Import/Export/Screenshot */}
+                    <div className="flex gap-2 mt-1">
+                        <button onClick={filters.onExportData} className="bg-green-800 hover:bg-green-700 px-2 py-1 rounded text-xs flex-1">Export JSON</button>
+                        <button onClick={() => document.getElementById('import-json').click()} className="bg-yellow-800 hover:bg-yellow-700 px-2 py-1 rounded text-xs flex-1">Import JSON</button>
+                        <input type="file" id="import-json" className="hidden" accept=".json" onChange={filters.onImportData} />
+                    </div>
+                    <button onClick={filters.onScreenshot} className="bg-purple-800 hover:bg-purple-700 px-2 py-1 rounded text-xs w-full">📸 Screenshot</button>
+
+                    {/* Standard Save/Load Config */}
+                    <div className="flex gap-2 mt-2 border-t border-gray-700 pt-2">
                         <button
                             onClick={() => {
                                 const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(filters));
@@ -261,15 +307,25 @@ const FilterPanel = ({ filters, onFilterChange }) => {
                             sizeAmplification: 1,
                             nodeSize: 5,
                             repulsion: -50,
-                            linkDistance: 50
+                            linkDistance: 50,
+                            nodeSizeWeight: 50,
+                            fetchLimit: 50
                         })}
                         className="w-full px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm transition-colors"
                     >
                         Reset Filters
                     </button>
+
+                    {/* Logout */}
+                    <button
+                        onClick={filters.onLogout}
+                        className="w-full mt-4 px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded text-sm font-bold shadow-lg transition-transform hover:scale-105"
+                    >
+                        ⛔ Logout Session
+                    </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

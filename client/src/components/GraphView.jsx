@@ -22,8 +22,27 @@ const GraphView = ({ data, filters }) => {
     const getNodeVal = (node) => {
         const baseSize = filters?.nodeSize || 5;
         const amp = filters?.sizeAmplification || 1;
-        // Base value from backend is ~ 2-15
-        return (node.val || 1) * (baseSize / 5) * Math.pow(1.1, (node.val * (amp - 1)));
+        const weight = (filters?.nodeSizeWeight !== undefined ? filters.nodeSizeWeight : 50) / 100;
+
+        // 1. Message Score (Logarithmic 2..12)
+        // Original logic: Math.min(2 + Math.log(node.messageCount + 1) * 2, 12);
+        // We use node.messageCount directly if available, fallback to 0
+        const count = node.messageCount || 0;
+        const msgScore = Math.min(2 + Math.log(count + 1) * 2, 12);
+
+        // 2. Connection Score (Linear-ish 2..12)
+        // Connections typicaly 0-50+. We cap impact at 20 connections -> score max
+        const conn = node.connections || 0;
+        const connScore = Math.min(2 + conn * 0.5, 12);
+
+        // Weighted Mix
+        // If weight 0 -> 100% msgScore
+        // If weight 1 -> 100% connScore
+        const blendedScore = (msgScore * (1 - weight)) + (connScore * weight);
+
+        // Return with Base scaling
+        // Note: node.val was the backend pre-calc, we ignore it now to use our dynamic one
+        return blendedScore * (baseSize / 5) * Math.pow(1.1, (blendedScore * (amp - 1)));
     };
 
     // Custom node renderer to support always-on labels

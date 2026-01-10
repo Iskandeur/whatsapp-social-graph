@@ -4,6 +4,8 @@ services:
   waha:
     image: devlikeapro/waha
     restart: always
+    # shared memory size is critical for Puppeteer (WEBJS) stability
+    shm_size: '2gb'
     environment:
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
       - WAHA_API_KEY=1234567890abcdef

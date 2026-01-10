@@ -32,6 +32,9 @@ let cachedQrCode = null;
 let isClientReady = false;
 let isProcessing = false;
 
+let lastProcessAttempt = 0;
+const PROCESS_COOLDOWN = 15000; // 15 seconds cooldown on failure
+
 // Polling loop to check Waha status
 async function checkWahaStatus() {
     try {
@@ -64,11 +67,26 @@ async function checkWahaStatus() {
 
             // Retry processing if data is missing, even if we are already "ready"
             if (!cachedGraphData && !isProcessing) {
-                console.log('Session is WORKING but we have no data. Starting processing...');
+                // Check cooldown
+                const now = Date.now();
+                if (now - lastProcessAttempt < PROCESS_COOLDOWN) {
+                    return; // Skip if we tried recently
+                }
+
+                console.log('No data cached, starting processing...');
                 isProcessing = true;
+                lastProcessAttempt = now;
+
                 io.emit('status', 'processing');
+                io.emit('progress', { current: 0, total: 100, message: 'Warming up connection...' });
+
+                // Add warmup delay to allow Waha to stabilize after auth
+                await new Promise(resolve => setTimeout(resolve, 5000));
+
+                io.emit('progress', { current: 0, total: 100, message: 'Fetching contacts and chats...' });
 
                 try {
+                    // Pass the progress callback
                     const result = await processData(waha, (progress) => {
                         io.emit('progress', progress);
                     });
@@ -124,6 +142,56 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('User disconnected');
+    });
+
+    socket.on('start_processing', async (config) => {
+        const limit = config?.limit || 50;
+        console.log(`Received manual start_processing request with limit: ${limit}`);
+
+        if (isProcessing) {
+            socket.emit('status', 'processing');
+            return;
+        }
+
+        isProcessing = true;
+        io.emit('status', 'processing');
+        io.emit('progress', { current: 0, total: 100, message: `Re-fetching with limit ${limit}...` });
+
+        try {
+            const result = await processData(waha, (progress) => {
+                io.emit('progress', progress);
+            }, limit);
+
+            cachedGraphData = result.graph;
+            cachedStats = result.stats;
+            cachedInsights = result.insights;
+
+            io.emit('data_ready', { graph: cachedGraphData, stats: cachedStats, insights: cachedInsights });
+            io.emit('status', 'ready');
+        } catch (error) {
+            console.error('Error re-processing data:', error.message);
+            io.emit('status', 'ready'); // Revert to ready state (showing old data) or error? Better keep old data if fail
+        } finally {
+            isProcessing = false;
+        }
+    });
+
+    socket.on('logout', async () => {
+        console.log('Received logout request');
+        try {
+            await waha.logout();
+            // Clear cache
+            cachedGraphData = null;
+            cachedStats = null;
+            cachedInsights = null;
+            cachedQrCode = null;
+            isClientReady = false;
+
+            io.emit('status', 'disconnected');
+            console.log('Logged out successfully. Waiting for polling to pick up new QR...');
+        } catch (error) {
+            console.error('Error handling logout:', error);
+        }
     });
 });
 

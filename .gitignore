@@ -36,3 +36,4 @@ yarn-error.log*
 *.txt
 chats/
 exports/
+devnote.md

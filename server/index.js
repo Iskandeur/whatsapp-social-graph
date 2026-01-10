@@ -122,8 +122,8 @@ async function checkWahaStatus() {
     }
 }
 
-// Poll every 3 seconds
-setInterval(checkWahaStatus, 3000);
+// Poll every 1 second to capture QR codes quickly
+setInterval(checkWahaStatus, 1000);
 
 io.on('connection', (socket) => {
     console.log('A user connected');

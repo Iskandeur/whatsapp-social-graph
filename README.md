@@ -72,6 +72,7 @@ Visualize your WhatsApp network as an interactive social graph. This tool connec
 -   **Stuck on "Fetching chats..."**: If you have thousands of chats, this step can take up to 5 minutes. The timeout has been increased to handle this. Please be patient.
 -   **Infinite Loop**: If the app keeps restarting processing, ensure you utilize the latest version which fixes a critical crash bug.
 -   **QR Code not appearing**: Check the logs `docker logs whatsapp-social-graph-server-1`. If Waha is starting up, it might take 10-20 seconds.
+-   **"Fetched 0 contacts" or Partial Graph**: Due to stability issues with the Waha API, the app may skip contact fetching or only load a portion of your chats (e.g., 300 chats) if the engine gets overloaded. This is expected behavior to prevent crashes. The graph will still build with the data retrieved.
 
 ## License
 

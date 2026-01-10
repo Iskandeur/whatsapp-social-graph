@@ -22,6 +22,7 @@ async function processData(wahaClient, onProgress = () => { }, maxMessages = 50)
             contacts = await withTimeout(wahaClient.getContacts(), 300000, "contacts");
         } catch (error) {
             console.error('Error fetching contacts (skipping):', error.message);
+            console.log('Will fall back to chat metadata for contact names.');
             // Non-fatal, proceed with empty contacts
             contacts = [];
         }

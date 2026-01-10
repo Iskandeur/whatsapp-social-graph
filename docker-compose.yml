@@ -13,6 +13,8 @@ services:
       - WAHA_DASHBOARD_PASSWORD=SecretPassword123!
       - WAHA_SWAGGER_USERNAME=admin
       - WAHA_SWAGGER_PASSWORD=SecretPassword123!
+      - WAHA_NOWEB_STORE_ENABLED=True
+      - WAHA_NOWEB_STORE_FULL_SYNC=True
     ports:
       - "3000:3000"
     volumes:

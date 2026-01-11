@@ -73,6 +73,7 @@ Visualize your WhatsApp network as an interactive social graph. This tool connec
 -   **Infinite Loop**: If the app keeps restarting processing, ensure you utilize the latest version which fixes a critical crash bug.
 -   **QR Code not appearing**: Check the logs `docker logs whatsapp-social-graph-server-1`. If Waha is starting up, it might take 10-20 seconds.
 -   **"Fetched 0 contacts" or Partial Graph**: Due to stability issues with the Waha API, the app may skip contact fetching or only load a portion of your chats (e.g., 300 chats) if the engine gets overloaded. This is expected behavior to prevent crashes. The graph will still build with the data retrieved.
+-   **Nodes disappearing with "Min Messages" Filter**: If the server fails to fetch messages for specific chats (due to Waha timeouts), it will default to 0 messages for that person. They will appear in the main graph (Green) but will be filtered out if you set "Min Messages" > 1. This ensures you still see your contacts even if their history failed to load.
 
 ## License
 

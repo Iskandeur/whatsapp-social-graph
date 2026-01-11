@@ -120,7 +120,15 @@ async function processData(wahaClient, onProgress = () => { }, maxMessages = 50)
         await Promise.all(batch.map(async (chat) => {
             try {
                 const chatId = chat.id._serialized || chat.id;
-                const messages = await fetchMessagesWithTimeout(chatId, 100);
+
+                // Safely fetch messages - if it fails, we still want to process the chat for Contact Metadata
+                let messages = [];
+                try {
+                    messages = await fetchMessagesWithTimeout(chatId, 100);
+                } catch (msgErr) {
+                    console.warn(`Failed to fetch messages for ${chatId}, proceeding with metadata only.`);
+                }
+
                 const messageCount = messages.length;
                 metadata.totalMessages += messageCount;
 
@@ -211,6 +219,8 @@ async function processData(wahaClient, onProgress = () => { }, maxMessages = 50)
                         // Only overwrite name if we have a better one (not just a number)
                         if (directName !== chatId.split('@')[0]) {
                             node.name = directName;
+                            // If we have a real name, treat them as a contact (Green) even if getContacts failed
+                            isMyContact = true;
                         }
                         node.isMyContact = isMyContact;
                     }

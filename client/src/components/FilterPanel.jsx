@@ -1,11 +1,65 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 
-const FilterPanel = ({ filters, onFilterChange }) => {
+const FilterPanel = ({ filters, onFilterChange, availableNodes = [], selectedNodeIds = new Set(), onToggleNodeSelection }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const searchResults = useMemo(() => {
+        if (!searchTerm || searchTerm.length < 2) return [];
+        return availableNodes
+            .filter(node => node.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            .slice(0, 5); // Limit to 5 results
+    }, [searchTerm, availableNodes]);
+
     return (
         <div className="bg-gray-800 p-4 rounded-lg shadow-xl w-full bg-opacity-90 backdrop-blur-sm">
-            <h2 className="text-lg font-bold mb-4 border-b border-gray-700 pb-2">Filters</h2>
+            <h2 className="text-lg font-bold mb-4 border-b border-gray-700 pb-2">Filters & Search</h2>
 
             <div className="space-y-4">
+                {/* Search Bar */}
+                <div className="relative mb-4">
+                    <input
+                        type="text"
+                        placeholder="Search Select Nodes..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-gray-700 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {searchResults.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 bg-gray-700 mt-1 rounded shadow-lg z-50 max-h-40 overflow-y-auto">
+                            {searchResults.map(node => (
+                                <div
+                                    key={node.id}
+                                    onClick={() => {
+                                        onToggleNodeSelection(node.id);
+                                        setSearchTerm('');
+                                    }}
+                                    className="px-3 py-2 text-sm hover:bg-gray-600 cursor-pointer border-b border-gray-600 last:border-0"
+                                >
+                                    {node.name}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Selected Nodes Chips */}
+                {selectedNodeIds.size > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-4">
+                        {Array.from(selectedNodeIds).map(id => {
+                            const node = availableNodes.find(n => n.id === id) || { name: id, id };
+                            return (
+                                <span key={id} className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                    {node.name}
+                                    <button
+                                        onClick={() => onToggleNodeSelection(id)}
+                                        className="hover:text-black font-bold focus:outline-none"
+                                    >×</button>
+                                </span>
+                            );
+                        })}
+                    </div>
+                )}
+
                 {/* View Mode */}
                 <div className="mb-4">
                     <label className="text-sm text-gray-300 block mb-2 font-medium">View Mode</label>

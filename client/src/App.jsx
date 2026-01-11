@@ -37,6 +37,21 @@ function App() {
 
   const [showUI, setShowUI] = useState(true);
 
+  // State for selected nodes (search/tracking)
+  const [selectedNodeIds, setSelectedNodeIds] = useState(new Set());
+
+  const handleToggleNodeSelection = (nodeId) => {
+    setSelectedNodeIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Toggle UI on 'h' or 'H'
@@ -116,6 +131,9 @@ function App() {
 
     // Filter nodes
     let filteredNodes = fullGraphData.nodes.filter(node => {
+      // Always show selected nodes (Pinned)
+      if (selectedNodeIds.has(node.id)) return true;
+
       // Social Mode: Hide ALL groups
       if (filters.viewMode === 'social' && node.isGroup) return false;
 
@@ -176,7 +194,7 @@ function App() {
     });
 
     return { nodes: filteredNodes, links: filteredLinks };
-  }, [fullGraphData, filters]);
+  }, [fullGraphData, filters, selectedNodeIds]);
 
   // Handler functions for new features
   const handleReload = (limit) => {
@@ -241,6 +259,8 @@ function App() {
       socket.emit('logout');
     }
   };
+
+
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-gray-900 text-white font-sans relative">
@@ -336,6 +356,9 @@ function App() {
                   onLogout: handleLogout
                 }}
                 onFilterChange={setFilters}
+                availableNodes={filteredGraphData.nodes} // Pass visible nodes for search
+                selectedNodeIds={selectedNodeIds}
+                onToggleNodeSelection={handleToggleNodeSelection}
               />
             </div>
             <div className={`pointer-events-auto ${showUI ? '' : 'hidden'}`}>
@@ -354,7 +377,11 @@ function App() {
           )}
 
           {/* Graph Canvas */}
-          <GraphView data={filteredGraphData} filters={filters} />
+          <GraphView
+            data={filteredGraphData}
+            filters={filters}
+            selectedNodeIds={selectedNodeIds}
+          />
         </>
       )}
     </div>

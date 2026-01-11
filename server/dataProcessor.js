@@ -110,7 +110,7 @@ async function processData(wahaClient, onProgress = () => { }, maxMessages = 50)
     const fetchMessagesWithTimeout = async (chatId, limit = 100, timeoutFn = 10000) => {
         return Promise.race([
             wahaClient.getMessages(chatId, limit),
-            new Promise((resolve) => setTimeout(() => resolve([]), timeoutFn))
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout fetching messages")), timeoutFn))
         ]);
     };
 
@@ -123,10 +123,30 @@ async function processData(wahaClient, onProgress = () => { }, maxMessages = 50)
 
                 // Safely fetch messages - if it fails, we still want to process the chat for Contact Metadata
                 let messages = [];
-                try {
-                    messages = await fetchMessagesWithTimeout(chatId, 100);
-                } catch (msgErr) {
-                    console.warn(`Failed to fetch messages for ${chatId}, proceeding with metadata only.`);
+                // Safely fetch messages - retry logic for named contacts
+                // let messages = []; // Removed duplicate
+                let attempts = 0;
+                const maxAttempts = 3;
+
+                while (attempts < maxAttempts) {
+                    try {
+                        messages = await fetchMessagesWithTimeout(chatId, 100);
+                        if (messages.length > 0) break; // Success
+
+                        // If 0 messages, it might be valid or a glitch.
+                        // But since we can't distinguish 500-wrapped-as-empty vs true-empty without more logic,
+                        // we'll assume it's fine unless we want to force retry on empty.
+                        // For now, accept empty if no error thrown.
+                        break;
+                    } catch (msgErr) {
+                        console.warn(`Failed to fetch messages for ${chatId} (Attempt ${attempts + 1}/${maxAttempts})`);
+                        attempts++;
+                        if (attempts < maxAttempts) {
+                            await new Promise(r => setTimeout(r, 1000 * attempts)); // Backoff
+                        } else {
+                            console.warn(`Give up fetching messages for ${chatId}, proceeding with metadata only.`);
+                        }
+                    }
                 }
 
                 const messageCount = messages.length;

@@ -27,6 +27,9 @@ Visualize your WhatsApp network as an interactive social graph. This tool connec
     -   Top Contacts & Groups.
     -   "Bridge People" (Connectors between groups).
     -   "Lone Wolves" (Direct contacts not in groups).
+-   **Search & Track**:
+    -   **Search Bar**: Find any contact or group by name.
+    -   **Pinning**: Selected nodes are highlighted in Orange and remain visible (pinned) even if they would otherwise be hidden by filters.
 
 ## Technology Stack
 

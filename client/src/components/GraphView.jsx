@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 
-const GraphView = ({ data, filters }) => {
+const GraphView = ({ data, filters, selectedNodeIds }) => {
     const graphRef = useRef();
 
     useEffect(() => {
@@ -25,23 +25,17 @@ const GraphView = ({ data, filters }) => {
         const weight = (filters?.nodeSizeWeight !== undefined ? filters.nodeSizeWeight : 50) / 100;
 
         // 1. Message Score (Logarithmic 2..12)
-        // Original logic: Math.min(2 + Math.log(node.messageCount + 1) * 2, 12);
-        // We use node.messageCount directly if available, fallback to 0
         const count = node.messageCount || 0;
         const msgScore = Math.min(2 + Math.log(count + 1) * 2, 12);
 
         // 2. Connection Score (Linear-ish 2..12)
-        // Connections typicaly 0-50+. We cap impact at 20 connections -> score max
         const conn = node.connections || 0;
         const connScore = Math.min(2 + conn * 0.5, 12);
 
         // Weighted Mix
-        // If weight 0 -> 100% msgScore
-        // If weight 1 -> 100% connScore
         const blendedScore = (msgScore * (1 - weight)) + (connScore * weight);
 
         // Return with Base scaling
-        // Note: node.val was the backend pre-calc, we ignore it now to use our dynamic one
         return blendedScore * (baseSize / 5) * Math.pow(1.1, (blendedScore * (amp - 1)));
     };
 
@@ -52,7 +46,8 @@ const GraphView = ({ data, filters }) => {
 
         // Draw Node Circle
         ctx.beginPath();
-        if (node.isMe) ctx.fillStyle = '#ef4444';
+        if (selectedNodeIds && selectedNodeIds.has(node.id)) ctx.fillStyle = '#f59e0b'; // Selected: Orange
+        else if (node.isMe) ctx.fillStyle = '#ef4444';
         else if (node.isMyContact) ctx.fillStyle = '#4ade80';
         else if (node.isGroup) ctx.fillStyle = '#8b5cf6';
         else ctx.fillStyle = '#60a5fa';
@@ -60,8 +55,8 @@ const GraphView = ({ data, filters }) => {
         ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
         ctx.fill();
 
-        // Draw Label
-        if (filters.showLabels) {
+        // Draw Label (Always if selected, or if toggle is on)
+        if (filters.showLabels || (selectedNodeIds && selectedNodeIds.has(node.id))) {
             ctx.font = `${fontSize}px Sans-Serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -76,10 +71,10 @@ const GraphView = ({ data, filters }) => {
                 ref={graphRef}
                 graphData={data}
                 nodeLabel="name"
-                // If showing labels, use custom painter. If not, we can rely on default OR just draw circles.
-                // Switching logic here:
-                nodeCanvasObject={filters.showLabels ? paintNode : undefined}
+                // Always use custom painter if we have selections, to ensure labels show up
+                nodeCanvasObject={filters.showLabels || (selectedNodeIds && selectedNodeIds.size > 0) ? paintNode : undefined}
                 nodeColor={node => {
+                    if (selectedNodeIds && selectedNodeIds.has(node.id)) return '#f59e0b'; // Selected
                     if (node.isMe) return '#ef4444'; // Red for Me
                     if (node.isMyContact) return '#4ade80'; // Green
                     if (node.isGroup) return '#8b5cf6'; // Purple

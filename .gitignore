@@ -1,4 +1,9 @@
-# Dependencies
+# Waha OpenAPI Spec
+waha_openapi.json
+
+# Backups and Debug
+*.backup
+debug_*.js
 node_modules/
 package-lock.json
 
@@ -37,3 +42,4 @@ yarn-error.log*
 chats/
 exports/
 devnote.md
+whatsapp-graph-2026-01-13.json

@@ -10,32 +10,26 @@ Visualize your WhatsApp network as an interactive social graph. This tool connec
 -   **Social vs Structural Views**:
     -   *Structural Mode*: Shows direct connections to groups.
     -   *Social Mode*: Infers connections between people based on shared groups (hides group nodes).
--   **Dynamic Node Sizing**:
-    -   **Size Mixer**: Adjust node size priority between **Message Volume** (how much you talk) and **Network Connections** (how connected they are).
--   **Smart Filtering**:
-    -   Filter by Timeframe (Last Week, Month, Year).
-    -   Hide Archived Chats.
-    -   Filter by Minimum Messages or Connections.
-    -   Show/Hide "Me" node.
--   **Data Management**:
-    -   **Import/Export**: Save your graph data to JSON and load it later (or share with friends).
-    -   **Fetch Limit Control**: Choose how many messages to analyze per chat (50, 100, 200, 500) for deeper or faster analysis.
--   **Privacy & Demo Mode**:
-    -   **Hide UI**: Press **'H'** to toggle the interface for clean screenshots.
-    -   **Logout**: Securely logout to return to the QR code screen for multi-user demos.
+-   **Performance for Large Accounts**:
+    -   **Massive Contact Fetching**: Optimized pagination to handle 40,000+ contacts without API timeouts.
+    -   **Smart Filtering**: Automatically hides disconnected "Address Book Only" contacts to keep the graph focused on actual interactions (Hairball Reduction).
+-   **Dynamic UI & Experience**:
+    -   **Compact Design**: Narrow sidebar with **Accordion-style Insights** to maximize graph visibility.
+    -   **Intelligent Camera**: Automatically centers and offsets focused nodes regardless of screen size or zoom level.
+    -   **QR Auto-Refresh**: Automatically detects stale QR codes and restarts the session to ensure a smooth login.
 -   **Insights**:
-    -   Top Contacts & Groups.
-    -   "Bridge People" (Connectors between groups).
-    -   "Lone Wolves" (Direct contacts not in groups).
--   **Search & Track**:
-    -   **Search Bar**: Find any contact or group by name.
-    -   **Pinning**: Selected nodes are highlighted in Orange and remain visible (pinned) even if they would otherwise be hidden by filters.
+    -   **Unexpected Bridges**: Shows up to 20 people who connect strictly disjoint social circles (e.g., your Work and Family groups).
+    -   **Super Connectors**: Top contacts by unique connections.
+    -   Top active contacts and largest groups.
+-   **Data Management**:
+    -   **Import/Export**: Save your graph data to JSON and load it later.
+    -   **Fetch Limit Control**: Choose how many messages to analyze per chat for deeper analysis.
 
 ## Technology Stack
 
 -   **Frontend**: React, Vite, `react-force-graph-2d`, TailwindCSS.
 -   **Backend**: Node.js, Express, Socket.IO.
--   **WhatsApp API**: Waha (WhatsApp HTTP API) running on Puppeteer (WEBJS engine).
+-   **WhatsApp API**: [Waha (WhatsApp HTTP API)](https://waha.dev/) running on Puppeteer.
 -   **Containerization**: Docker & Docker Compose.
 
 ## Prerequisites
@@ -55,20 +49,18 @@ Visualize your WhatsApp network as an interactive social graph. This tool connec
 4.  **Scan the QR Code**:
     Open WhatsApp on your phone -> Linked Devices -> Link a Device -> Scan the QR code displayed on screen.
 5.  **Wait for Processing**:
-    The app will fetch your contacts and chat history. This may take a few minutes depending on your chat volume and the "Fetch Limit" setting.
+    The app will fetch your contacts and chat history.
     *Default limit is 50 messages per chat for speed.*
 
 ## Controls Guide
 
 ### Advanced Filters
--   **Node Size Weight**: Slider to balance size calculation.
-    -   Left (0%): Size based purely on Message Count.
-    -   Right (100%): Size based purely on Number of Connections.
--   **Fetch Limit**: Select a limit (e.g., 200) and click **Reload** to fetch more history. Warning: Takes longer!
--   **Export/Import**: Use the buttons to save your graph state.
+-   **Node Size Weight**: Balance size between Message Count (Left) and Connection Count (Right).
+-   **Fetch Limit**: Increase for deeper history analysis. Click **Reload** to re-process.
+-   **Export/Import**: Save/load graph snapshots.
 
 ### Keyboard Shortcuts
--   **H**: Toggle User Interface (useful for presentations/screenshots).
+-   **H**: Toggle User Interface.
 
 ### Troubleshooting
 

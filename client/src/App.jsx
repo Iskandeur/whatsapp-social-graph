@@ -39,21 +39,44 @@ function App() {
 
   // State for selected nodes (search/tracking)
   const [selectedNodeIds, setSelectedNodeIds] = useState(new Set());
+  // New state to trigger camera focus
+  const [focusedNodeId, setFocusedNodeId] = useState(null);
 
   const handleToggleNodeSelection = (nodeId) => {
     setSelectedNodeIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(nodeId)) {
         newSet.delete(nodeId);
+        // If we deselect the FOCUSED node, clear the focus
+        // Note: checking against the state value available in scope
+        if (focusedNodeId === nodeId) {
+          setFocusedNodeId(null);
+        }
       } else {
         newSet.add(nodeId);
+        setFocusedNodeId(nodeId);
       }
       return newSet;
     });
   };
 
+  const handleFocusNode = (nodeId) => {
+    // Ensure it's selected
+    setSelectedNodeIds(prev => {
+      const newSet = new Set(prev);
+      if (!newSet.has(nodeId)) newSet.add(nodeId);
+      return newSet;
+    });
+    // Trigger focus
+    setFocusedNodeId(nodeId);
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Ignore if user is typing in an input field
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        return;
+      }
       // Toggle UI on 'h' or 'H'
       if (e.key.toLowerCase() === 'h') {
         setShowUI(prev => !prev);
@@ -344,7 +367,7 @@ function App() {
       {status === 'ready' && (
         <>
           {/* Sidebar for Controls and Stats */}
-          <div className={`fixed top-4 left-4 w-80 max-h-[96vh] overflow-y-auto flex flex-col gap-4 z-50 transition-opacity duration-300 ${showUI ? 'opacity-100 pointer-events-none' : 'opacity-0 pointer-events-none'}`}>
+          <div className={`fixed top-4 left-4 w-72 max-h-[96vh] overflow-y-auto flex flex-col gap-4 z-50 transition-opacity duration-300 ${showUI ? 'opacity-100 pointer-events-none' : 'opacity-0 pointer-events-none'}`}>
             <div className={`pointer-events-auto ${showUI ? '' : 'hidden'}`}>
               <FilterPanel
                 filters={{
@@ -359,6 +382,7 @@ function App() {
                 availableNodes={filteredGraphData.nodes} // Pass visible nodes for search
                 selectedNodeIds={selectedNodeIds}
                 onToggleNodeSelection={handleToggleNodeSelection}
+                onFocusNode={handleFocusNode}
               />
             </div>
             <div className={`pointer-events-auto ${showUI ? '' : 'hidden'}`}>
@@ -381,6 +405,7 @@ function App() {
             data={filteredGraphData}
             filters={filters}
             selectedNodeIds={selectedNodeIds}
+            focusedNodeId={focusedNodeId}
           />
         </>
       )}

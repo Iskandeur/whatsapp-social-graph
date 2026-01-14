@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 
-const FilterPanel = ({ filters, onFilterChange, availableNodes = [], selectedNodeIds = new Set(), onToggleNodeSelection }) => {
+const FilterPanel = ({ filters, onFilterChange, availableNodes = [], selectedNodeIds = new Set(), onToggleNodeSelection, onFocusNode }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const searchResults = useMemo(() => {
@@ -25,7 +25,10 @@ const FilterPanel = ({ filters, onFilterChange, availableNodes = [], selectedNod
                         className="w-full bg-gray-700 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     {searchResults.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 bg-gray-700 mt-1 rounded shadow-lg z-50 max-h-40 overflow-y-auto">
+                        <div
+                            className="absolute top-full left-0 right-0 mt-1 rounded shadow-2xl z-50 max-h-60 overflow-y-auto border border-gray-600"
+                            style={{ backgroundColor: '#1f2937' }} // Force Tailwind gray-800 opaque
+                        >
                             {searchResults.map(node => (
                                 <div
                                     key={node.id}
@@ -33,7 +36,7 @@ const FilterPanel = ({ filters, onFilterChange, availableNodes = [], selectedNod
                                         onToggleNodeSelection(node.id);
                                         setSearchTerm('');
                                     }}
-                                    className="px-3 py-2 text-sm hover:bg-gray-600 cursor-pointer border-b border-gray-600 last:border-0"
+                                    className="px-3 py-2 text-sm text-white hover:bg-gray-700 cursor-pointer border-b border-gray-600 last:border-0"
                                 >
                                     {node.name}
                                 </div>
@@ -48,11 +51,19 @@ const FilterPanel = ({ filters, onFilterChange, availableNodes = [], selectedNod
                         {Array.from(selectedNodeIds).map(id => {
                             const node = availableNodes.find(n => n.id === id) || { name: id, id };
                             return (
-                                <span key={id} className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                <span
+                                    key={id}
+                                    className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 cursor-pointer hover:bg-orange-600 transition-colors"
+                                    onClick={() => onFocusNode(id)} // Focus on click
+                                    title="Click to zoom"
+                                >
                                     {node.name}
                                     <button
-                                        onClick={() => onToggleNodeSelection(id)}
-                                        className="hover:text-black font-bold focus:outline-none"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Don't trigger focus
+                                            onToggleNodeSelection(id);
+                                        }}
+                                        className="hover:text-black font-bold focus:outline-none ml-1"
                                     >×</button>
                                 </span>
                             );
@@ -80,9 +91,9 @@ const FilterPanel = ({ filters, onFilterChange, availableNodes = [], selectedNod
                 </div>
 
                 {/* Node Size Slider */}
-                <div className="mb-4">
-                    <label className="text-sm text-gray-300 block mb-1">
-                        Base Node Size: {filters.nodeSize || 5}
+                <div className="mb-2">
+                    <label className="text-xs text-gray-400 block mb-0.5">
+                        Base Size: {filters.nodeSize || 5}
                     </label>
                     <input
                         type="range"
@@ -90,14 +101,14 @@ const FilterPanel = ({ filters, onFilterChange, availableNodes = [], selectedNod
                         max="20"
                         value={filters.nodeSize || 5}
                         onChange={(e) => onFilterChange({ ...filters, nodeSize: parseInt(e.target.value) })}
-                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                        className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                     />
                 </div>
 
                 {/* Size Amplification Slider */}
-                <div className="mb-4">
-                    <label className="text-sm text-gray-300 block mb-1">
-                        Size by Messages: x{filters.sizeAmplification || 1}
+                <div className="mb-2">
+                    <label className="text-xs text-gray-400 block mb-0.5">
+                        Msg Multiplier: x{filters.sizeAmplification || 1}
                     </label>
                     <input
                         type="range"
@@ -106,30 +117,30 @@ const FilterPanel = ({ filters, onFilterChange, availableNodes = [], selectedNod
                         step="0.1"
                         value={filters.sizeAmplification || 1}
                         onChange={(e) => onFilterChange({ ...filters, sizeAmplification: parseFloat(e.target.value) })}
-                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                        className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                     />
                 </div>
 
-                {/* Hide Archived Toggle */}
-                <div className="flex items-center justify-between mb-4">
-                    <label className="text-sm text-gray-300">Hide Archived</label>
-                    <input
-                        type="checkbox"
-                        checked={filters.hideArchived}
-                        onChange={(e) => onFilterChange({ ...filters, hideArchived: e.target.checked })}
-                        className="w-4 h-4 rounded"
-                    />
-                </div>
-
-                {/* Show Labels Toggle */}
-                <div className="flex items-center justify-between mb-4">
-                    <label className="text-sm text-gray-300">Show All Labels</label>
-                    <input
-                        type="checkbox"
-                        checked={filters.showLabels}
-                        onChange={(e) => onFilterChange({ ...filters, showLabels: e.target.checked })}
-                        className="w-4 h-4 rounded"
-                    />
+                {/* Toggles Row */}
+                <div className="flex justify-between items-center mb-2">
+                    <label className="flex items-center text-xs text-gray-300">
+                        <input
+                            type="checkbox"
+                            checked={filters.hideArchived}
+                            onChange={(e) => onFilterChange({ ...filters, hideArchived: e.target.checked })}
+                            className="mr-1.5 w-3 h-3 rounded"
+                        />
+                        Hide Archived
+                    </label>
+                    <label className="flex items-center text-xs text-gray-300">
+                        <input
+                            type="checkbox"
+                            checked={filters.showLabels}
+                            onChange={(e) => onFilterChange({ ...filters, showLabels: e.target.checked })}
+                            className="mr-1.5 w-3 h-3 rounded"
+                        />
+                        Labels
+                    </label>
                 </div>
 
 

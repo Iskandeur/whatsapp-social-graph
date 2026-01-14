@@ -54,9 +54,23 @@ async function checkWahaStatus() {
             const qr = await waha.getQR();
             if (qr && qr !== cachedQrCode) {
                 cachedQrCode = qr;
+                lastQrUpdate = Date.now(); // Track freshness
                 console.log('New QR Code received from Waha');
                 io.emit('qr', qr);
                 io.emit('status', 'qr_ready');
+            } else if (cachedQrCode) {
+                const age = Date.now() - (lastQrUpdate || Date.now());
+                if (age > 20000 && age % 10000 < 1000) { // Log every 10s after 20s
+                    console.log(`QR Code is ${Math.round(age / 1000)}s old (Stale?)`);
+                }
+                // Force refresh if stuck for > 60s
+                if (age > 60000) {
+                    console.log('QR Code stuck for > 60s. Restarting session to force new QR...');
+                    cachedQrCode = null;
+                    await waha.stopSession(); // We'll add this method
+                    await waha.startSession();
+                    lastQrUpdate = Date.now();
+                }
             }
         } else if (status.status === 'WORKING') {
             if (!isClientReady) {

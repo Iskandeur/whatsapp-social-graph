@@ -40,11 +40,47 @@ class WahaClient {
     }
 
     async getContacts() {
+        try {
+            const allContacts = [];
+            // Optimize for speed: Fetch larger batches with lower latency
+            const limit = 1500;
+            let offset = 0;
+
+            while (true) {
+                const response = await this.retry(async () => {
+                    // Use /api/contacts/all with pagination
+                    return this.axios.get(`/api/contacts/all?session=${this.session}&limit=${limit}&offset=${offset}`);
+                }, `getContacts-offset-${offset}`);
+
+                const contacts = response.data;
+                if (!Array.isArray(contacts) || contacts.length === 0) {
+                    break;
+                }
+
+                allContacts.push(...contacts);
+
+                if (contacts.length < limit) {
+                    break;
+                }
+
+                offset += limit;
+                // Minimized delay for performance while avoiding rate limits
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            return allContacts;
+        } catch (error) {
+            console.error('getContacts failed. Returning empty list.', error.message);
+            // Fallback to empty list so we can still build graph from chats
+            return [];
+        }
+    }
+
+    async getContact(contactId) {
         return this.retry(async () => {
-            // Revert to query param style as WEBJS engine returns 404 for session-scoped contacts
-            const response = await this.axios.get(`/api/contacts?session=${this.session}`);
+            // Updated based on user feedback (Swagger): GET /api/contacts?contactId=...
+            const response = await this.axios.get(`/api/contacts?contactId=${contactId}&session=${this.session}`);
             return response.data;
-        }, 'getContacts');
+        }, `getContact-${contactId}`, 3, 2000); // Fewer retries for single contact
     }
 
     async getChats() {
@@ -67,13 +103,6 @@ class WahaClient {
 
                 allChats = allChats.concat(chats);
 
-                if (chats.length < limit) {
-                    break;
-                }
-
-                offset += limit;
-                // Small delay to be nice to the engine
-                await new Promise(resolve => setTimeout(resolve, 500));
                 if (chats.length < limit) {
                     break;
                 }
@@ -166,6 +195,15 @@ class WahaClient {
             } else {
                 console.error('Error starting session:', e.message);
             }
+        }
+    }
+
+    async stopSession() {
+        try {
+            await this.axios.post(`/api/sessions/${this.session}/stop`);
+            console.log('Session stopped via API.');
+        } catch (e) {
+            console.error('Error stopping session:', e.message);
         }
     }
 }

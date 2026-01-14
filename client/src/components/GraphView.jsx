@@ -1,8 +1,52 @@
 import React, { useRef, useEffect } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 
-const GraphView = ({ data, filters, selectedNodeIds }) => {
+const GraphView = ({ data, filters, selectedNodeIds, focusedNodeId }) => {
     const graphRef = useRef();
+
+    // Zoom/Focus Logic
+    useEffect(() => {
+        if (graphRef.current && focusedNodeId) {
+            const node = data.nodes.find(n => n.id === focusedNodeId);
+            if (node) {
+                // Pin the node so it doesn't drift away while focused
+                // First, unpin all others to avoid freezing the whole graph over time
+                data.nodes.forEach(n => { n.fx = null; n.fy = null; });
+
+                // Lock this node in place matches its current position
+                node.fx = node.x;
+                node.fy = node.y;
+
+                // Initial smooth zoom
+                graphRef.current.zoom(6, 1000);
+
+                // Tracking loop to stabilize camera on moving node
+                // This ensures we follow the node even if the physics engine is moving it
+                let startTime = Date.now();
+                const duration = 2500; // Track for 2.5 seconds to ensure stabilization
+
+                const animate = () => {
+                    if (!graphRef.current) return;
+                    const elapsed = Date.now() - startTime;
+                    if (elapsed > duration) return;
+
+                    // Shift camera so node is centered but offset to the right (to clear the sidebar)
+                    // Sidebar is w-72 (288px). We want roughly 330px visual offset.
+                    // Visual Offset = Graph Coordinates Offset * Zoom Level
+                    // Therefore: Graph Offset = Visual Offset / Zoom Level
+                    const currentZoom = graphRef.current.zoom();
+                    const visualOffset = 330; // 288px sidebar + 42px padding
+                    const graphOffset = visualOffset / currentZoom;
+
+                    // Center Viewport to the LEFT of the node (node.x - offset)
+                    graphRef.current.centerAt(node.x - graphOffset, node.y, 0);
+
+                    requestAnimationFrame(animate);
+                };
+                requestAnimationFrame(animate);
+            }
+        }
+    }, [focusedNodeId, data.nodes]);
 
     useEffect(() => {
         if (graphRef.current) {
@@ -38,6 +82,19 @@ const GraphView = ({ data, filters, selectedNodeIds }) => {
         // Return with Base scaling
         return blendedScore * (baseSize / 5) * Math.pow(1.1, (blendedScore * (amp - 1)));
     };
+
+    // Unpin nodes when they are deselected
+    useEffect(() => {
+        if (data && data.nodes) {
+            data.nodes.forEach(node => {
+                // If node is pinned (fx is set) BUT it is no longer selected, unpin it
+                if ((node.fx !== null || node.fy !== null) && (!selectedNodeIds || !selectedNodeIds.has(node.id))) {
+                    node.fx = null;
+                    node.fy = null;
+                }
+            });
+        }
+    }, [selectedNodeIds, data.nodes]);
 
     // Custom node renderer to support always-on labels
     const paintNode = (node, ctx, globalScale) => {

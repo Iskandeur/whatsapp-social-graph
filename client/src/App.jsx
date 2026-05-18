@@ -61,6 +61,11 @@ function App() {
   const qrCodeRef = useRef(null);
   useEffect(() => { qrCodeRef.current = qrCode; }, [qrCode]);
 
+  // Once the user imports a JSON to bypass WhatsApp, live qr/status events
+  // must not clobber the imported graph — the QR rotates server-side and
+  // would otherwise kick the user back to the scan screen.
+  const importedViewRef = useRef(false);
+
   // State for selected nodes (search/tracking)
   const [selectedNodeIds, setSelectedNodeIds] = useState(new Set());
   // New state to trigger camera focus
@@ -123,12 +128,14 @@ function App() {
     });
 
     socket.on('qr', (url) => {
+      if (importedViewRef.current) return;
       console.log('QR code received');
       setQrCode(url);
       setStatus('qr_ready');
     });
 
     socket.on('status', (newStatus) => {
+      if (importedViewRef.current) return;
       console.log('Status update:', newStatus);
       // Don't override qr_ready with disconnected if we have a QR code
       if (newStatus === 'disconnected' && qrCodeRef.current) {
@@ -149,6 +156,17 @@ function App() {
       setInsights(insights);
       setStatus('ready');
     });
+
+    // The socket is created during render, so it may finish connecting before
+    // this effect attaches the `connect` listener — and StrictMode's dev-only
+    // effect re-run disconnects it via the cleanup below. Socket.IO does not
+    // replay `connect` for late listeners, so reconnect if needed and sync the
+    // connected state directly.
+    if (socket.connected) {
+      setIsConnected(true);
+    } else {
+      socket.connect();
+    }
 
     return () => {
       socket.off('connect');
@@ -287,6 +305,7 @@ function App() {
       try {
         const importedData = JSON.parse(event.target.result);
         if (importedData.graph && importedData.stats) {
+          importedViewRef.current = true;
           setFullGraphData(importedData.graph);
           setStats(importedData.stats);
           setInsights(importedData.insights || null);
@@ -361,7 +380,7 @@ function App() {
       )}
 
       {(status === 'qr_ready' || status === 'auth_failure') && (
-        <QRCodeView qrCode={qrCode} />
+        <QRCodeView qrCode={qrCode} onImportData={handleImportData} />
       )}
 
       {status === 'authenticated' && (

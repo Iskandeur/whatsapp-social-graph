@@ -14,7 +14,7 @@ services:
       - WAHA_NOWEB_STORE_ENABLED=True
       - WAHA_NOWEB_STORE_FULL_SYNC=True
     ports:
-      - "3000:3000"
+      - "${WAHA_HOST_PORT:-3000}:3000"
     volumes:
       - ./waha-data:/app/sessions
 
@@ -22,7 +22,7 @@ services:
     build: ./server
     restart: always
     ports:
-      - "3001:3001"
+      - "${SERVER_HOST_PORT:-3001}:3001"
     environment:
       - WAHA_ENDPOINT=http://waha:3000
       - WAHA_API_KEY=1234567890abcdef
@@ -35,7 +35,9 @@ services:
   client:
     build: ./client
     ports:
-      - "5173:5173"
+      - "${CLIENT_HOST_PORT:-5173}:5173"
+    environment:
+      - VITE_SERVER_PORT=${SERVER_HOST_PORT:-3001}
     volumes:
       - ./client:/app
       - /app/node_modules

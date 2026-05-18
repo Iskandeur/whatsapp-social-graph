@@ -6,8 +6,10 @@ import StatsView from './components/StatsView';
 import FilterPanel from './components/FilterPanel';
 import InsightsPanel from './components/InsightsPanel';
 
-// Use current hostname (works for localhost and IP)
-const socket = io(`http://${window.location.hostname}:3001`);
+// Use current hostname (works for localhost and IP). Port is configurable
+// via VITE_SERVER_PORT for deployments that remap the server's host port.
+const SERVER_PORT = import.meta.env.VITE_SERVER_PORT || '3001';
+const socket = io(`http://${window.location.hostname}:${SERVER_PORT}`);
 
 function App() {
   const [isConnected, setIsConnected] = useState(false);

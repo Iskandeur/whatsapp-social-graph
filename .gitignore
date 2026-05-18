@@ -15,6 +15,10 @@ package-lock.json
 dist/
 build/
 
+# Local deployment overrides (host-specific ports, etc.)
+docker-compose.override.yml
+waha-data/
+
 # Environment variables
 .env
 .env.local

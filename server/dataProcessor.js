@@ -74,7 +74,6 @@ async function processData(wahaClient, onProgress = () => { }, maxMessages = 50)
     const metadata = {
         messagesByContact: {},
         lastActivityByContact: {},
-        lastActivityByContact: {},
         groupMemberships: {},
         bridgeScore: {},
         totalMessages: 0,
@@ -149,7 +148,7 @@ async function processData(wahaClient, onProgress = () => { }, maxMessages = 50)
 
                 while (attempts < maxAttempts) {
                     try {
-                        messages = await fetchMessagesWithTimeout(chatId, 50);
+                        messages = await fetchMessagesWithTimeout(chatId, maxMessages);
                         if (messages.length > 0) break;
                         break;
                     } catch (msgErr) {

@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   waha:
     image: devlikeapro/waha

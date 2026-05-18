@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import io from 'socket.io-client';
 import QRCodeView from './components/QRCodeView';
 import GraphView from './components/GraphView';
@@ -36,6 +36,10 @@ function App() {
   });
 
   const [showUI, setShowUI] = useState(true);
+
+  // Ref to read latest qrCode inside socket handlers without re-subscribing
+  const qrCodeRef = useRef(null);
+  useEffect(() => { qrCodeRef.current = qrCode; }, [qrCode]);
 
   // State for selected nodes (search/tracking)
   const [selectedNodeIds, setSelectedNodeIds] = useState(new Set());
@@ -107,7 +111,7 @@ function App() {
     socket.on('status', (newStatus) => {
       console.log('Status update:', newStatus);
       // Don't override qr_ready with disconnected if we have a QR code
-      if (newStatus === 'disconnected' && qrCode) {
+      if (newStatus === 'disconnected' && qrCodeRef.current) {
         return;
       }
       setStatus(newStatus);
@@ -128,6 +132,7 @@ function App() {
 
     return () => {
       socket.off('connect');
+      socket.off('disconnect');
       socket.off('qr');
       socket.off('status');
       socket.off('progress');
@@ -367,7 +372,7 @@ function App() {
       {status === 'ready' && (
         <>
           {/* Sidebar for Controls and Stats */}
-          <div className={`fixed top-4 left-4 w-72 max-h-[96vh] overflow-y-auto flex flex-col gap-4 z-50 transition-opacity duration-300 ${showUI ? 'opacity-100 pointer-events-none' : 'opacity-0 pointer-events-none'}`}>
+          <div className={`fixed top-4 left-4 w-72 max-h-[96vh] overflow-y-auto flex flex-col gap-4 z-50 transition-opacity duration-300 ${showUI ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
             <div className={`pointer-events-auto ${showUI ? '' : 'hidden'}`}>
               <FilterPanel
                 filters={{

@@ -33,6 +33,7 @@ let isClientReady = false;
 let isProcessing = false;
 
 let lastProcessAttempt = 0;
+let lastQrUpdate = 0;
 const PROCESS_COOLDOWN = 15000; // 15 seconds cooldown on failure
 
 // Polling loop to check Waha status

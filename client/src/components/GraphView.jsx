@@ -1,6 +1,25 @@
 import React, { useRef, useEffect } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 
+// Compare-mode colors: nodes carry a `network` field only when two networks
+// are merged. Without it, the single-network palette below is used.
+const NETWORK_COLORS = {
+    you: '#ef4444',
+    them: '#06b6d4',
+    shared: '#fbbf24',
+    yoursOnly: '#60a5fa',
+    theirsOnly: '#a78bfa',
+};
+
+const nodeFill = (node, selectedNodeIds) => {
+    if (selectedNodeIds && selectedNodeIds.has(node.id)) return '#f59e0b'; // Selected: Orange
+    if (node.network) return NETWORK_COLORS[node.network] || '#60a5fa';
+    if (node.isMe) return '#ef4444'; // Red for Me
+    if (node.isMyContact) return '#4ade80'; // Green
+    if (node.isGroup) return '#8b5cf6'; // Purple
+    return '#60a5fa'; // Blue
+};
+
 const GraphView = ({ data, filters, selectedNodeIds, focusedNodeId }) => {
     const graphRef = useRef();
 
@@ -103,11 +122,7 @@ const GraphView = ({ data, filters, selectedNodeIds, focusedNodeId }) => {
 
         // Draw Node Circle
         ctx.beginPath();
-        if (selectedNodeIds && selectedNodeIds.has(node.id)) ctx.fillStyle = '#f59e0b'; // Selected: Orange
-        else if (node.isMe) ctx.fillStyle = '#ef4444';
-        else if (node.isMyContact) ctx.fillStyle = '#4ade80';
-        else if (node.isGroup) ctx.fillStyle = '#8b5cf6';
-        else ctx.fillStyle = '#60a5fa';
+        ctx.fillStyle = nodeFill(node, selectedNodeIds);
 
         ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
         ctx.fill();
@@ -130,13 +145,7 @@ const GraphView = ({ data, filters, selectedNodeIds, focusedNodeId }) => {
                 nodeLabel="name"
                 // Always use custom painter if we have selections, to ensure labels show up
                 nodeCanvasObject={filters.showLabels || (selectedNodeIds && selectedNodeIds.size > 0) ? paintNode : undefined}
-                nodeColor={node => {
-                    if (selectedNodeIds && selectedNodeIds.has(node.id)) return '#f59e0b'; // Selected
-                    if (node.isMe) return '#ef4444'; // Red for Me
-                    if (node.isMyContact) return '#4ade80'; // Green
-                    if (node.isGroup) return '#8b5cf6'; // Purple
-                    return '#60a5fa'; // Blue
-                }}
+                nodeColor={node => nodeFill(node, selectedNodeIds)}
                 nodeVal={getNodeVal}
                 linkColor={link => link.type === 'CO_MEMBER' ? '#ffffff11' : '#ffffff33'}
                 backgroundColor="#111827"

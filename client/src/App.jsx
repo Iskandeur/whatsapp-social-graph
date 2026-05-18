@@ -5,6 +5,9 @@ import GraphView from './components/GraphView';
 import StatsView from './components/StatsView';
 import FilterPanel from './components/FilterPanel';
 import InsightsPanel from './components/InsightsPanel';
+import CompareModal from './components/CompareModal';
+import CrossNetworkInsights from './components/CrossNetworkInsights';
+import { mergeNetworks } from './utils/mergeNetworks';
 
 // Use current hostname (works for localhost and IP). Port is configurable
 // via VITE_SERVER_PORT for deployments that remap the server's host port.
@@ -39,6 +42,11 @@ function App() {
   });
 
   const [showUI, setShowUI] = useState(true);
+
+  // Network comparison: parsed second network ({ graph, stats, insights }).
+  const [comparison, setComparison] = useState(null);
+  const [showCompareModal, setShowCompareModal] = useState(false);
+  const compareMode = !!comparison;
 
   // Ref to read latest qrCode inside socket handlers without re-subscribing
   const qrCodeRef = useRef(null);
@@ -143,9 +151,23 @@ function App() {
     };
   }, []);
 
+  // Merge in the second network when comparing.
+  const mergedResult = useMemo(() => {
+    if (!comparison) return null;
+    try {
+      return mergeNetworks({ graph: fullGraphData, stats, insights }, comparison);
+    } catch (err) {
+      console.error('Failed to merge networks:', err);
+      return null;
+    }
+  }, [comparison, fullGraphData, stats, insights]);
+
+  // The graph the rest of the UI operates on: merged when comparing, else single.
+  const sourceGraph = (compareMode && mergedResult) ? mergedResult.mergedGraph : fullGraphData;
+
   // Apply filters to graph data
   const filteredGraphData = useMemo(() => {
-    if (!fullGraphData.nodes || fullGraphData.nodes.length === 0) {
+    if (!sourceGraph.nodes || sourceGraph.nodes.length === 0) {
       return { nodes: [], links: [] };
     }
 
@@ -161,7 +183,7 @@ function App() {
     const timeThreshold = timeThresholds[filters.timeRange] || 0;
 
     // Filter nodes
-    let filteredNodes = fullGraphData.nodes.filter(node => {
+    let filteredNodes = sourceGraph.nodes.filter(node => {
       // Always show selected nodes (Pinned)
       if (selectedNodeIds.has(node.id)) return true;
 
@@ -204,7 +226,7 @@ function App() {
     const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
 
     // Filter links to only include those between visible nodes
-    const filteredLinks = fullGraphData.links.filter(link => {
+    const filteredLinks = sourceGraph.links.filter(link => {
       const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
       const targetId = typeof link.target === 'object' ? link.target.id : link.target;
 
@@ -225,7 +247,7 @@ function App() {
     });
 
     return { nodes: filteredNodes, links: filteredLinks };
-  }, [fullGraphData, filters, selectedNodeIds]);
+  }, [sourceGraph, filters, selectedNodeIds]);
 
   // Handler functions for new features
   const handleReload = (limit, includeArchived = false) => {
@@ -273,6 +295,15 @@ function App() {
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleCompareData = (parsed) => {
+    setComparison(parsed);
+    setShowCompareModal(false);
+  };
+
+  const handleClearComparison = () => {
+    setComparison(null);
   };
 
   const handleScreenshot = () => {
@@ -384,7 +415,10 @@ function App() {
                   onExportData: handleExportData,
                   onImportData: handleImportData,
                   onScreenshot: handleScreenshot,
-                  onLogout: handleLogout
+                  onLogout: handleLogout,
+                  onOpenCompare: () => setShowCompareModal(true),
+                  onClearComparison: handleClearComparison,
+                  compareMode
                 }}
                 onFilterChange={setFilters}
                 availableNodes={filteredGraphData.nodes} // Pass visible nodes for search
@@ -397,7 +431,14 @@ function App() {
               <StatsView stats={stats} filteredCount={filteredGraphData.nodes.length} />
             </div>
             <div className={`pointer-events-auto ${showUI ? '' : 'hidden'}`}>
-              <InsightsPanel insights={insights} />
+              {compareMode && mergedResult ? (
+                <CrossNetworkInsights
+                  insights={mergedResult.crossInsights}
+                  onFocusNode={handleFocusNode}
+                />
+              ) : (
+                <InsightsPanel insights={insights} />
+              )}
             </div>
           </div>
 
@@ -415,6 +456,33 @@ function App() {
             selectedNodeIds={selectedNodeIds}
             focusedNodeId={focusedNodeId}
           />
+
+          {/* Compare-mode color legend */}
+          {compareMode && (
+            <div className="fixed bottom-4 right-4 z-50 bg-gray-800/95 backdrop-blur-sm rounded-lg p-3 text-xs shadow-xl">
+              <div className="font-semibold mb-1.5 text-gray-300">Networks</div>
+              {[
+                ['#ef4444', 'You'],
+                ['#06b6d4', 'Them'],
+                ['#fbbf24', 'Shared'],
+                ['#60a5fa', 'Yours only'],
+                ['#a78bfa', 'Theirs only'],
+              ].map(([color, label]) => (
+                <div key={label} className="flex items-center gap-2 py-0.5">
+                  <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: color }} />
+                  <span className="text-gray-300">{label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Compare networks modal */}
+          {showCompareModal && (
+            <CompareModal
+              onCompareData={handleCompareData}
+              onClose={() => setShowCompareModal(false)}
+            />
+          )}
         </>
       )}
     </div>

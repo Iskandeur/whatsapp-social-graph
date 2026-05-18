@@ -329,6 +329,23 @@ const FilterPanel = ({ filters, onFilterChange, availableNodes = [], selectedNod
                     </div>
                     <button onClick={filters.onScreenshot} className="bg-purple-800 hover:bg-purple-700 px-2 py-1 rounded text-xs w-full">📸 Screenshot</button>
 
+                    {/* Compare with another exported network */}
+                    {filters.compareMode ? (
+                        <button
+                            onClick={filters.onClearComparison}
+                            className="bg-red-900 hover:bg-red-800 px-2 py-1 rounded text-xs w-full"
+                        >
+                            ✕ Clear comparison
+                        </button>
+                    ) : (
+                        <button
+                            onClick={filters.onOpenCompare}
+                            className="bg-cyan-800 hover:bg-cyan-700 px-2 py-1 rounded text-xs w-full"
+                        >
+                            🔀 Compare network
+                        </button>
+                    )}
+
                     {/* Standard Save/Load Config */}
                     <div className="flex gap-2 mt-2 border-t border-gray-700 pt-2">
                         <button

@@ -43,6 +43,7 @@ const GraphView = ({ data, filters, selectedNodeIds, focusedNodeId }) => {
                 // This ensures we follow the node even if the physics engine is moving it
                 let startTime = Date.now();
                 const duration = 2500; // Track for 2.5 seconds to ensure stabilization
+                let rafId = null;
 
                 const animate = () => {
                     if (!graphRef.current) return;
@@ -60,9 +61,15 @@ const GraphView = ({ data, filters, selectedNodeIds, focusedNodeId }) => {
                     // Center Viewport to the LEFT of the node (node.x - offset)
                     graphRef.current.centerAt(node.x - graphOffset, node.y, 0);
 
-                    requestAnimationFrame(animate);
+                    rafId = requestAnimationFrame(animate);
                 };
-                requestAnimationFrame(animate);
+                rafId = requestAnimationFrame(animate);
+
+                // Cancel the loop if the focus changes or the component unmounts,
+                // so a new focus can't run a second loop fighting this one.
+                return () => {
+                    if (rafId !== null) cancelAnimationFrame(rafId);
+                };
             }
         }
     }, [focusedNodeId, data.nodes]);

@@ -34,7 +34,13 @@ async function processData(wahaClient, onProgress = () => { }, maxMessages = 50,
         chats = await withTimeout(wahaClient.getChats(), 300000, "chats");
         console.log(`Fetched ${chats.length} chats`);
 
-        myInfo = await wahaClient.getMe();
+        try {
+            myInfo = await wahaClient.getMe();
+        } catch (error) {
+            console.error('Error fetching own profile (skipping):', error.message);
+            console.log("Will fall back to a synthetic 'me' node.");
+            myInfo = null;
+        }
 
     } catch (err) {
         console.error("Critical error fetching initial data:", err);
@@ -177,7 +183,9 @@ async function processData(wahaClient, onProgress = () => { }, maxMessages = 50,
                 metadata.totalMessages += messageCount;
 
                 if (messageCount > 0) {
-                    const oldestInBatch = messages.reduce((min, m) => Math.min(min, m.timestamp * 1000), Date.now());
+                    const oldestInBatch = messages.reduce((min, m) => (
+                        typeof m.timestamp === 'number' ? Math.min(min, m.timestamp * 1000) : min
+                    ), Date.now());
                     if (oldestInBatch < metadata.oldestTimestamp) {
                         metadata.oldestTimestamp = oldestInBatch;
                     }
@@ -298,11 +306,6 @@ async function processData(wahaClient, onProgress = () => { }, maxMessages = 50,
                         }
                     }
                     // --- DIRECT CHAT LOGIC END ---
-
-                    // DEBUG: Specific logging for problem contacts
-                    if (chatId.includes('33669775442') || chatId.includes('33665181747')) {
-                        console.log(`[DEBUG TARGET] DirectChat ${chatId}: name='${chat.name}', rawName='${rawName}', isMyContact=${isMyContact}, FinalName='${contactMap.get(chatId).name}'`);
-                    }
                 }
 
                 if (contactMap.has(chatId)) {
@@ -583,10 +586,6 @@ function computeInsights(contactMap, groupMap, metadata, myId) {
     let bridgesCandidates = 0;
     let pairsChecked = 0;
 
-    console.log(`[Insights Debug] groupMap size: ${groupMap.size}`);
-    console.log(`[Insights Debug] Contacts with group info: ${Array.from(contactMap.values()).filter(c => c.groups && c.groups.size > 0).length}`);
-    console.log(`[Insights Debug] Contacts with >= 2 groups: ${Array.from(contactMap.values()).filter(c => c.groups && c.groups.size >= 2).length}`);
-
     for (const contact of contactMap.values()) {
         if (contact.id === myId) continue;
         if (!contact.groups || contact.groups.size < 2) continue;
@@ -603,7 +602,6 @@ function computeInsights(contactMap, groupMap, metadata, myId) {
 
                 // Skip if group info missing
                 if (!groupMap.has(g1) || !groupMap.has(g2)) {
-                    // console.log(`[Insights Debug] Missing group info for ${g1} or ${g2}`);
                     continue;
                 }
 
@@ -611,11 +609,6 @@ function computeInsights(contactMap, groupMap, metadata, myId) {
                 const similarity = getJaccard(g1, g2);
                 // "Disconnect" score: 1 is completely disjoint
                 const disconnect = 1 - similarity;
-
-                // Log first few
-                if (pairsChecked < 5) {
-                    console.log(`[Insights Debug] Pair: ${groupMap.get(g1).name} | ${groupMap.get(g2).name} -> Sim: ${similarity.toFixed(2)} Disconnect: ${disconnect.toFixed(2)}`);
-                }
 
                 if (disconnect > maxDisconnect) {
                     maxDisconnect = disconnect;
@@ -637,9 +630,6 @@ function computeInsights(contactMap, groupMap, metadata, myId) {
     }
 
     console.log(`[Insights] Scanned ${bridgesCandidates} candidates, checked ${pairsChecked} pairs. Found ${bridges.length} bridges.`);
-    if (bridges.length > 0) {
-        console.log(`[Insights] Top bridge: ${bridges[0].name} (${bridges[0].score.toFixed(2)})`);
-    }
 
     insights.unexpectedBridges = bridges
         .sort((a, b) => b.score - a.score)

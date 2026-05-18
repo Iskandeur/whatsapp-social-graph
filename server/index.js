@@ -2,20 +2,43 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const { WahaClient } = require('./wahaClient');
-const cors = require('cors');
 const { processData } = require('./dataProcessor');
 
 const app = express();
 const server = http.createServer(app);
+
+// Restrict Socket.IO to localhost and private LAN ranges (plus anything listed
+// in ALLOWED_ORIGINS) so an arbitrary public website can't open a connection
+// and read the social graph. Browser clients always send an Origin header.
+const extraOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',').map(o => o.trim()).filter(Boolean);
+
+const isAllowedOrigin = (origin) => {
+    if (!origin) return true; // non-browser clients send no Origin header
+    if (extraOrigins.includes(origin)) return true;
+    let host;
+    try {
+        host = new URL(origin).hostname;
+    } catch {
+        return false;
+    }
+    return (
+        host === 'localhost' ||
+        host === '[::1]' ||
+        host.endsWith('.local') ||
+        /^127\./.test(host) ||
+        /^10\./.test(host) ||
+        /^192\.168\./.test(host) ||
+        /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+    );
+};
+
 const io = new Server(server, {
     cors: {
-        origin: "*", // Allow all origins for dev flexibility (WSL/IP access)
+        origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
         methods: ["GET", "POST"]
     }
 });
-
-app.use(cors());
-app.use(express.json());
 
 const port = 3001;
 
@@ -139,8 +162,16 @@ async function checkWahaStatus() {
     }
 }
 
-// Poll every 1 second to capture QR codes quickly
-setInterval(checkWahaStatus, 1000);
+// Poll to capture QR codes quickly. Self-rescheduling so a slow check
+// (processing can take minutes) never overlaps the next invocation.
+async function pollWahaStatus() {
+    try {
+        await checkWahaStatus();
+    } finally {
+        setTimeout(pollWahaStatus, 1000);
+    }
+}
+pollWahaStatus();
 
 io.on('connection', (socket) => {
     console.log('A user connected');
@@ -211,23 +242,6 @@ io.on('connection', (socket) => {
             console.error('Error handling logout:', error);
         }
     });
-});
-
-// API Endpoints
-app.get('/api/graph', (req, res) => {
-    if (cachedGraphData) {
-        res.json(cachedGraphData);
-    } else {
-        res.status(503).json({ error: 'Data not ready yet' });
-    }
-});
-
-app.get('/api/stats', (req, res) => {
-    if (cachedStats) {
-        res.json(cachedStats);
-    } else {
-        res.status(503).json({ error: 'Data not ready yet' });
-    }
 });
 
 server.listen(port, () => {

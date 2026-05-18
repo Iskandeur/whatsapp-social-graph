@@ -12,9 +12,17 @@ import { mergeNetworks } from './utils/mergeNetworks';
 // Use current hostname (works for localhost and IP). Port is configurable
 // via VITE_SERVER_PORT for deployments that remap the server's host port.
 const SERVER_PORT = import.meta.env.VITE_SERVER_PORT || '3001';
-const socket = io(`http://${window.location.hostname}:${SERVER_PORT}`);
 
 function App() {
+  // Socket lives for the lifetime of this component instance and is torn down
+  // on unmount, so a hot-reload doesn't leak a stale connection each time this
+  // module re-evaluates.
+  const socketRef = useRef(null);
+  if (!socketRef.current) {
+    socketRef.current = io(`http://${window.location.hostname}:${SERVER_PORT}`);
+  }
+  const socket = socketRef.current;
+
   const [isConnected, setIsConnected] = useState(false);
   const [status, setStatus] = useState('connecting'); // connecting, disconnected, qr_ready, authenticated, processing, ready, error
   const [qrCode, setQrCode] = useState(null);
@@ -38,7 +46,8 @@ function App() {
     showMe: true,
     nodeSizeWeight: 50,
     fetchLimit: 50,
-    includeArchived: false
+    includeArchived: false,
+    hideArchived: false
   });
 
   const [showUI, setShowUI] = useState(true);
@@ -148,6 +157,7 @@ function App() {
       socket.off('status');
       socket.off('progress');
       socket.off('data_ready');
+      socket.disconnect();
     };
   }, []);
 

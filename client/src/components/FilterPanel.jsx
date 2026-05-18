@@ -303,12 +303,23 @@ const FilterPanel = ({ filters, onFilterChange, availableNodes = [], selectedNod
                             <option value="500">Limit: 500</option>
                         </select>
                         <button
-                            onClick={() => filters.onReload && filters.onReload(filters.fetchLimit || 50)}
+                            onClick={() => filters.onReload && filters.onReload(filters.fetchLimit || 50, !!filters.includeArchived)}
                             className="bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded text-xs whitespace-nowrap"
                         >
                             ↻ Reload
                         </button>
                     </div>
+
+                    {/* Archived chats opt-in: off by default to keep fetches fast */}
+                    <label className="flex items-center text-xs text-gray-300 mt-1" title="Archived chats are skipped by default. Enable to include them on next Reload.">
+                        <input
+                            type="checkbox"
+                            checked={!!filters.includeArchived}
+                            onChange={(e) => onFilterChange({ ...filters, includeArchived: e.target.checked })}
+                            className="mr-1.5 w-3 h-3 rounded"
+                        />
+                        Include archived chats on reload
+                    </label>
 
                     {/* Import/Export/Screenshot */}
                     <div className="flex gap-2 mt-1">
@@ -374,7 +385,8 @@ const FilterPanel = ({ filters, onFilterChange, availableNodes = [], selectedNod
                             repulsion: -50,
                             linkDistance: 50,
                             nodeSizeWeight: 50,
-                            fetchLimit: 50
+                            fetchLimit: 50,
+                            includeArchived: false
                         })}
                         className="w-full px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm transition-colors"
                     >

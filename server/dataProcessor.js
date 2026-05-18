@@ -1,5 +1,6 @@
-async function processData(wahaClient, onProgress = () => { }, maxMessages = 50) {
-    console.log("Starting enhanced data processing with Waha...");
+async function processData(wahaClient, onProgress = () => { }, maxMessages = 50, options = {}) {
+    const { includeArchived = false } = options;
+    console.log(`Starting enhanced data processing with Waha... (includeArchived=${includeArchived})`);
     onProgress({ current: 0, total: 100, message: "Fetching contacts and chats..." });
 
     // Helper for timeout
@@ -41,7 +42,17 @@ async function processData(wahaClient, onProgress = () => { }, maxMessages = 50)
         throw err;
     }
 
-    onProgress({ current: 5, total: 100, message: `Found ${chats.length} chats and ${contacts.length} contacts` });
+    // Filter out archived chats unless explicitly requested. WhatsApp users
+    // typically archive low-signal threads, so processing them just adds load
+    // to waha (which is fragile for big accounts) without enriching the graph.
+    const totalChatCount = chats.length;
+    const archivedChatCount = chats.filter(c => c.archived || c.archive).length;
+    if (!includeArchived && archivedChatCount > 0) {
+        chats = chats.filter(c => !(c.archived || c.archive));
+        console.log(`Skipping ${archivedChatCount} archived chats (${chats.length} remaining). Use includeArchived to fetch them.`);
+    }
+
+    onProgress({ current: 5, total: 100, message: `Found ${chats.length} chats and ${contacts.length} contacts${!includeArchived && archivedChatCount > 0 ? ` (${archivedChatCount} archived skipped)` : ''}` });
 
     const nodes = [];
     const links = [];
@@ -503,6 +514,9 @@ async function processData(wahaClient, onProgress = () => { }, maxMessages = 50)
             totalContacts: activeNodes.filter(n => n.isMyContact && !n.isMe && !n.isGroup).length,
             totalGroups: groupMap.size,
             totalChats: chats.length,
+            totalChatsBeforeFilter: totalChatCount,
+            archivedSkipped: includeArchived ? 0 : archivedChatCount,
+            includeArchived,
             totalNodes: activeNodes.length,
             totalLinks: links.length,
             totalMessages: metadata.totalMessages,

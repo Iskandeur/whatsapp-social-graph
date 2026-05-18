@@ -101,10 +101,12 @@ async function checkWahaStatus() {
                 io.emit('progress', { current: 0, total: 100, message: 'Fetching contacts and chats...' });
 
                 try {
-                    // Pass the progress callback
+                    // Pass the progress callback. Initial automatic processing
+                    // skips archived chats by default — the user can re-fetch
+                    // with includeArchived via the Reload control.
                     const result = await processData(waha, (progress) => {
                         io.emit('progress', progress);
-                    });
+                    }, 50, { includeArchived: false });
 
                     cachedGraphData = result.graph;
                     cachedStats = result.stats;
@@ -161,7 +163,8 @@ io.on('connection', (socket) => {
 
     socket.on('start_processing', async (config) => {
         const limit = config?.limit || 50;
-        console.log(`Received manual start_processing request with limit: ${limit}`);
+        const includeArchived = !!config?.includeArchived;
+        console.log(`Received manual start_processing request with limit: ${limit}, includeArchived: ${includeArchived}`);
 
         if (isProcessing) {
             socket.emit('status', 'processing');
@@ -170,12 +173,12 @@ io.on('connection', (socket) => {
 
         isProcessing = true;
         io.emit('status', 'processing');
-        io.emit('progress', { current: 0, total: 100, message: `Re-fetching with limit ${limit}...` });
+        io.emit('progress', { current: 0, total: 100, message: `Re-fetching with limit ${limit}${includeArchived ? ' (incl. archived)' : ''}...` });
 
         try {
             const result = await processData(waha, (progress) => {
                 io.emit('progress', progress);
-            }, limit);
+            }, limit, { includeArchived });
 
             cachedGraphData = result.graph;
             cachedStats = result.stats;

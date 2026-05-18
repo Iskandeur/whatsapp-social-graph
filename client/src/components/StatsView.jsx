@@ -28,6 +28,12 @@ const StatsView = ({ stats, filteredCount }) => {
                     <span className="text-gray-400">Total Chats:</span>
                     <span className="font-mono font-semibold">{stats.totalChats}</span>
                 </div>
+                {stats.archivedSkipped > 0 && (
+                    <div className="flex justify-between text-xs text-gray-500" title="Archived chats are skipped on the initial fetch. Toggle 'Include archived chats on reload' and hit Reload to include them.">
+                        <span>Archived skipped:</span>
+                        <span className="font-mono">{stats.archivedSkipped}</span>
+                    </div>
+                )}
 
                 <div className="border-t border-gray-700 pt-3 space-y-3">
                     <div className="flex justify-between">

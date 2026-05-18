@@ -34,7 +34,8 @@ function App() {
     showLabels: false,
     showMe: true,
     nodeSizeWeight: 50,
-    fetchLimit: 50
+    fetchLimit: 50,
+    includeArchived: false
   });
 
   const [showUI, setShowUI] = useState(true);
@@ -227,9 +228,9 @@ function App() {
   }, [fullGraphData, filters, selectedNodeIds]);
 
   // Handler functions for new features
-  const handleReload = (limit) => {
-    console.log("Reloading with limit:", limit);
-    socket.emit('start_processing', { limit });
+  const handleReload = (limit, includeArchived = false) => {
+    console.log("Reloading with limit:", limit, "includeArchived:", includeArchived);
+    socket.emit('start_processing', { limit, includeArchived });
   };
 
   const handleExportData = () => {
